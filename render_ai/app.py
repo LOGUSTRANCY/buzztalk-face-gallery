@@ -3,6 +3,14 @@ import io
 import numpy as np
 import faiss
 import face_recognition
+import requests
+
+def load_drive_image(file_id):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    r = requests.get(url, timeout=15)
+    r.raise_for_status()
+    return face_recognition.load_image_file(io.BytesIO(r.content))
+
 
 from flask import Flask, request, jsonify, abort
 
@@ -37,13 +45,16 @@ def drive_url(file_id):
 def build_index():
     for fid in DRIVE_FILE_IDS:
         try:
-            img = face_recognition.load_image_file(drive_url(fid))
+            img = load_drive_image(fid)
             encs = face_recognition.face_encodings(img)
+
             if encs:
                 index.add(np.array([encs[0]], dtype="float32"))
                 image_ids.append(fid)
+
         except Exception as e:
             print("Skipping:", fid, e)
+
 
 build_index()
 
