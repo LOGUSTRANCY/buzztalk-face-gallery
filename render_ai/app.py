@@ -1,14 +1,20 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 import face_recognition
+import numpy as np
+import faiss
 
 app = Flask(__name__)
 
+# 128-d face embeddings
+index = faiss.IndexFlatL2(128)
+image_ids = []
+
 @app.route("/")
 def home():
-    return "Face Recognition Ready!"
+    return "FAISS Ready"
 
-@app.route("/test")
-def test():
+@app.route("/status")
+def status():
     return jsonify({
-        "face_recognition_loaded": True
+        "faces_indexed": index.ntotal
     })
