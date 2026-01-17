@@ -1,4 +1,12 @@
 import os
+from flask import abort, request
+
+SCHOOL_KEY = os.environ.get("SCHOOL_KEY")
+
+@app.before_request
+def protect():
+    if request.headers.get("X-School-Key") != SCHOOL_KEY:
+        abort(403)
 import requests
 import io
 
