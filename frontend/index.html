@@ -1,1 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Buzztalk Face Gallery</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Enjoying Buzztalk? Enjoy more by getting your images here!</h1>
+  <p>Upload a selfie and see the magic...</p>
+</header>
+
+<section class="upload-box">
+  <input type="file" id="selfie" accept="image/*" />
+  <button onclick="scanFace()">Scan Face</button>
+</section>
+
+<section id="loading" class="hidden">
+Reviving your moments.
+</section>
+
+<section id="gallery" class="masonry"></section>
+
+<script src="script.js"></script>
+</body>
+</html>
 
