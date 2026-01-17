@@ -13,7 +13,7 @@ export default {
     const resp = await fetch(env.AI_SERVER + "/match", {
       method: "POST",
       headers: {
-        "X-School-Key": env.SCHOOL_KEY
+        "X-School-Key": env.MPS786
       },
       body: formData
     });
