@@ -1,10 +1,14 @@
-from flask import Flask
+from flask import Flask, jsonify
+import face_recognition
+
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Render AI is working!"
+    return "Face Recognition Ready!"
 
-if __name__ == "__main__":
-    app.run()
-
+@app.route("/test")
+def test():
+    return jsonify({
+        "face_recognition_loaded": True
+    })
