@@ -1,92 +1,126 @@
 import os
 import io
+import requests
 import numpy as np
 import faiss
 import face_recognition
-import requests
+from flask import Flask, request, jsonify
 
-def load_drive_image(file_id):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    r = requests.get(url, timeout=15)
-    r.raise_for_status()
-    return face_recognition.load_image_file(io.BytesIO(r.content))
-
-
-from flask import Flask, request, jsonify, abort
-
-# ---------------- BASIC SETUP ----------------
+# -----------------------------
+# App & Security
+# -----------------------------
 
 app = Flask(__name__)
 
-SCHOOL_KEY = os.environ.get("SCHOOL_KEY")
+SCHOOL_KEY = os.environ.get("SCHOOL_KEY", "dev-key")
 
-# ---------------- SECURITY ----------------
+# -----------------------------
+# FAISS GLOBAL INDEX (in-memory)
+# -----------------------------
 
-@app.before_request
-def protect():
-    if request.headers.get("X-School-Key") != SCHOOL_KEY:
-        abort(403)
+DIMENSIONS = 128  # face_recognition embedding size
+face_index = faiss.IndexFlatL2(DIMENSIONS)
+face_images = []  # maps index → image URL
 
-# ---------------- FAISS SETUP ----------------
+# -----------------------------
+# Health Check
+# -----------------------------
 
-index = faiss.IndexFlatL2(128)
-image_ids = []   # stores Google Drive FILE_IDs
-
-# ⚠️ MANUALLY ADD FILE IDS (PUBLIC DRIVE FILES)
-DRIVE_FILE_IDS = [
-    "FILE_ID_1",
-    "FILE_ID_2",
-    "FILE_ID_3"
-]
-
-def drive_url(file_id):
-    return f"https://drive.google.com/uc?id={file_id}"
-
-def build_index():
-    for fid in DRIVE_FILE_IDS:
-        try:
-            img = load_drive_image(fid)
-            encs = face_recognition.face_encodings(img)
-
-            if encs:
-                index.add(np.array([encs[0]], dtype="float32"))
-                image_ids.append(fid)
-
-        except Exception as e:
-            print("Skipping:", fid, e)
-
-
-build_index()
-
-# ---------------- ROUTES ----------------
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
-    return "Face AI Backend Live"
+    return "Buzztalk Face AI running", 200
 
-@app.route("/status")
+
+@app.route("/status", methods=["GET"])
 def status():
     return jsonify({
-        "faces_indexed": index.ntotal
+        "faces_indexed": face_index.ntotal
     })
 
+
+# -----------------------------
+# INDEX NEW IMAGE (from R2)
+# -----------------------------
+
+@app.route("/index", methods=["POST"])
+def index_image():
+    # Security check
+    if request.headers.get("X-School-Key") != SCHOOL_KEY:
+        return "Unauthorized", 403
+
+    data = request.get_json()
+    if not data or "image_url" not in data:
+        return "Missing image_url", 400
+
+    image_url = data["image_url"]
+
+    try:
+        # Download image
+        img_bytes = requests.get(image_url, timeout=10).content
+        image = face_recognition.load_image_file(
+            io.BytesIO(img_bytes)
+        )
+
+        encodings = face_recognition.face_encodings(image)
+
+        if not encodings:
+            return jsonify({"indexed": 0})
+
+        for enc in encodings:
+            vec = np.array([enc]).astype("float32")
+            face_index.add(vec)
+            face_images.append(image_url)
+
+        return jsonify({"indexed": len(encodings)})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# -----------------------------
+# MATCH SELFIE → PHOTOS
+# -----------------------------
+
 @app.route("/match", methods=["POST"])
-def match():
-    if "file" not in request.files:
+def match_face():
+    # Security check
+    if request.headers.get("X-School-Key") != SCHOOL_KEY:
+        return "Unauthorized", 403
+
+    if "photo" not in request.files:
         return jsonify({"photos": []})
 
-    img = face_recognition.load_image_file(request.files["file"])
-    encs = face_recognition.face_encodings(img)
+    try:
+        selfie = face_recognition.load_image_file(
+            request.files["photo"]
+        )
+        encs = face_recognition.face_encodings(selfie)
 
-    if not encs:
-        return jsonify({"photos": []})
+        if not encs or face_index.ntotal == 0:
+            return jsonify({"photos": []})
 
-    q = np.array([encs[0]], dtype="float32")
-    D, I = index.search(q, 10)
+        query = np.array([encs[0]]).astype("float32")
 
-    results = []
-    for idx, dist in zip(I[0], D[0]):
-        if idx < len(image_ids) and dist < 0.6:
-            results.append(drive_url(image_ids[idx]))
+        # Search top 10 closest faces
+        D, I = face_index.search(query, 10)
 
-    return jsonify({"photos": results})
+        results = []
+        for idx in I[0]:
+            if 0 <= idx < len(face_images):
+                results.append(face_images[idx])
+
+        # Remove duplicates
+        results = list(dict.fromkeys(results))
+
+        return jsonify({"photos": results})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# -----------------------------
+# Local run (Render ignores this)
+# -----------------------------
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
