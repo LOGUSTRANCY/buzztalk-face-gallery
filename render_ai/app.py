@@ -1,88 +1,57 @@
 import os
-from flask import abort, request
+import io
+import numpy as np
+import faiss
+import face_recognition
+
+from flask import Flask, request, jsonify, abort
+
+# ---------------- BASIC SETUP ----------------
+
+app = Flask(__name__)
 
 SCHOOL_KEY = os.environ.get("SCHOOL_KEY")
+
+# ---------------- SECURITY ----------------
 
 @app.before_request
 def protect():
     if request.headers.get("X-School-Key") != SCHOOL_KEY:
         abort(403)
-import requests
-import io
 
-from flask import Flask, jsonify
-import face_recognition
-import numpy as np
-import faiss
+# ---------------- FAISS SETUP ----------------
 
-app = Flask(__name__)
-
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-DRIVE_FOLDER_ID = "PUT_YOUR_FOLDER_ID_HERE"
-
-# FAISS index
 index = faiss.IndexFlatL2(128)
-image_map = []  # index -> Drive fileId
+image_ids = []   # stores Google Drive FILE_IDs
 
+# ⚠️ MANUALLY ADD FILE IDS (PUBLIC DRIVE FILES)
+DRIVE_FILE_IDS = [
+    "FILE_ID_1",
+    "FILE_ID_2",
+    "FILE_ID_3"
+]
 
-# ---------- GOOGLE DRIVE HELPERS ----------
+def drive_url(file_id):
+    return f"https://drive.google.com/uc?id={file_id}"
 
-def list_drive_images():
-    """List image files from a public Google Drive folder"""
-    url = "https://www.googleapis.com/drive/v3/files"
-    params = {
-        "q": f"'{DRIVE_FOLDER_ID}' in parents and mimeType contains 'image/'",
-        "fields": "files(id, name)",
-        "key": GOOGLE_API_KEY
-    }
-
-    r = requests.get(url, params=params, timeout=20)
-    r.raise_for_status()
-    return r.json().get("files", [])
-
-
-def download_drive_image(file_id):
-    """Download image bytes using public Drive access"""
-    url = f"https://www.googleapis.com/drive/v3/files/{file_id}"
-    params = {
-        "alt": "media",
-        "key": GOOGLE_API_KEY
-    }
-
-    r = requests.get(url, params=params, timeout=30)
-    r.raise_for_status()
-    return r.content
-
-
-# ---------- INDEX BUILD (RUN ONCE PER DEPLOY) ----------
-
-def build_faiss_index():
-    global image_map
-    files = list_drive_images()
-
-    for f in files:
+def build_index():
+    for fid in DRIVE_FILE_IDS:
         try:
-            img_bytes = download_drive_image(f["id"])
-            img = face_recognition.load_image_file(io.BytesIO(img_bytes))
+            img = face_recognition.load_image_file(drive_url(fid))
             encs = face_recognition.face_encodings(img)
-
             if encs:
                 index.add(np.array([encs[0]], dtype="float32"))
-                image_map.append(f["id"])
-
+                image_ids.append(fid)
         except Exception as e:
-            print("Skipping file:", f["name"], str(e))
+            print("Skipping:", fid, e)
 
+build_index()
 
-build_faiss_index()
-
-
-# ---------- ROUTES ----------
+# ---------------- ROUTES ----------------
 
 @app.route("/")
 def home():
-    return "Drive + Face Recognition Ready"
-
+    return "Face AI Backend Live"
 
 @app.route("/status")
 def status():
@@ -90,14 +59,12 @@ def status():
         "faces_indexed": index.ntotal
     })
 
-
 @app.route("/match", methods=["POST"])
 def match():
-    file = requests.files.get("file")
-    if not file:
-        return jsonify({"error": "No file"}), 400
+    if "file" not in request.files:
+        return jsonify({"photos": []})
 
-    img = face_recognition.load_image_file(file)
+    img = face_recognition.load_image_file(request.files["file"])
     encs = face_recognition.face_encodings(img)
 
     if not encs:
@@ -108,8 +75,7 @@ def match():
 
     results = []
     for idx, dist in zip(I[0], D[0]):
-        if idx < len(image_map) and dist < 0.6:
-            fid = image_map[idx]
-            results.append(f"https://drive.google.com/uc?id={fid}")
+        if idx < len(image_ids) and dist < 0.6:
+            results.append(drive_url(image_ids[idx]))
 
     return jsonify({"photos": results})
