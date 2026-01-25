@@ -73,59 +73,62 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (SIMPLE VERSION)
+// QR SCANNER (TIMING FIXED)
 // -------------------------------------
-let html5QrCode;
+let qrScanner = null;
 
 function scanQR() {
-  // 1. Unhide the modal FIRST so the div is visible to the library
+  // 1. Show the modal FIRST
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden"; // Lock scroll
+  document.body.style.overflow = "hidden"; // Prevent scrolling
 
-  // 2. Initialize library if not already done
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("qr-reader");
+  // 2. WAIT for the modal to be visible before starting scanner
+  // This prevents the "Camera Not Loading" error
+  setTimeout(startScannerLogic, 300);
+}
+
+function startScannerLogic() {
+  // If scanner already exists, clear it first to avoid duplicates
+  if (qrScanner) {
+    qrScanner.clear().then(() => {
+      initNewScanner();
+    }).catch(err => {
+      initNewScanner();
+    });
+  } else {
+    initNewScanner();
   }
+}
 
-  // 3. Get Cameras and Start (Exact logic from your working test file)
+function initNewScanner() {
+  // Create fresh instance
+  qrScanner = new Html5Qrcode("qr-reader");
+
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      
-      // Try to select back camera, otherwise use the first one available
-      let cameraId = devices[0].id;
-      const backCam = devices.find(d => d.label.toLowerCase().includes("back"));
-      if (backCam) {
-        cameraId = backCam.id;
-      }
+      // Pick back camera if available, else first one
+      const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
 
-      // Start scanning
-      html5QrCode.start(
-        cameraId, 
+      qrScanner.start(
+        cameraId,
         {
           fps: 10,
           qrbox: 250
         },
         (decodedText) => {
-          // --- SUCCESS CALLBACK ---
-          console.log(`Scan result: ${decodedText}`);
+          // Success!
+          closeQR(); // Close immediately
           
-          // Stop scanning
-          closeQR();
-
-          // Auto-fill input
           const cleanText = decodedText.trim();
           document.getElementById("uid").value = cleanText;
-
-          // Auto-trigger view photos
-          loadPhotos();
+          loadPhotos(); // Auto-load
         },
         (errorMessage) => {
-          // Parse error, ignore it
+          // Ignore scanning errors
         }
       ).catch(err => {
-        // Start failed
-        alert("Error starting camera: " + err);
+        alert("Camera start failed: " + err);
         closeQR();
       });
     } else {
@@ -133,7 +136,7 @@ function scanQR() {
       closeQR();
     }
   }).catch(err => {
-    alert("Camera permission error: " + err);
+    alert("Camera permissions denied.");
     closeQR();
   });
 }
@@ -141,15 +144,12 @@ function scanQR() {
 function closeQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.add("hidden");
-  document.body.style.overflow = ""; // Unlock scroll
+  document.body.style.overflow = "";
 
-  if (html5QrCode) {
-    // Stop the camera
-    html5QrCode.stop().then(() => {
-      // clear() removes the video element from the DOM to reset it
-      html5QrCode.clear();
-    }).catch(err => {
-      console.log("Failed to stop/clear", err);
-    });
+  if (qrScanner) {
+    // Stop and clear the scanner so it's fresh next time
+    qrScanner.stop().then(() => {
+      qrScanner.clear();
+    }).catch(err => console.log(err));
   }
 }
