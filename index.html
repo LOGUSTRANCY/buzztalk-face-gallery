@@ -9,11 +9,20 @@
 <body>
 
 <!-- QR MODAL MUST BE INSIDE BODY -->
-<div id="qrModal" class="qr-modal hidden" onclick="closeQR()">
-  <div id="qr-reader" onclick="event.stopPropagation()"></div>
+<div id="qrModal" class="qr-modal hidden">
+  <div class="qr-box">
+    <div id="qr-reader"></div>
+
+    <div class="qr-controls">
+      <select id="cameraSelect"></select>
+      <button onclick="switchCamera()">🔄 Switch</button>
+      <button onclick="closeQR()">✖ Close</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+
 
 
 
