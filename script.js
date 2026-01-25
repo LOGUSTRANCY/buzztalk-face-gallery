@@ -78,38 +78,41 @@ function renderGallery(photoUrls) {
 let html5QrCode = null;
 let allCameras = [];
 let cameraIndex = 0;
+let isScanning = false;
 
 async function scanQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 
-  // 1. ZOMBIE KILLER: Stop existing browser streams
+  // 1. WINDOWS FIX: Kill any zombie streams
   if (window.stream) {
     window.stream.getTracks().forEach(track => track.stop());
   }
   
-  // 2. Clear previous instance safely
+  // 2. Clear old instance
   if (html5QrCode) {
     try { await html5QrCode.clear(); } catch(e) {}
     html5QrCode = null;
   }
 
-  // 3. Wait for UI then init
+  // 3. Start fresh
   setTimeout(initScanner, 300);
 }
 
 function initScanner() {
   html5QrCode = new Html5Qrcode("qr-reader");
 
+  // Get cameras and start
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      allCameras = devices;
+      allCameras = devices; // Save list for flipping
       
-      // Default to back camera (last one usually)
-      cameraIndex = devices.length - 1; 
+      // Default to back camera
+      let backCamIndex = devices.findIndex(d => d.label.toLowerCase().includes("back"));
+      if (backCamIndex === -1) backCamIndex = devices.length - 1;
       
-      // Start the camera
+      cameraIndex = backCamIndex;
       startCamera(allCameras[cameraIndex].id);
     } else {
       alert("No cameras found.");
@@ -121,12 +124,15 @@ function initScanner() {
 }
 
 function startCamera(cameraId) {
+  if (isScanning) return; // Prevent double start
+  isScanning = true;
+
   html5QrCode.start(
     cameraId,
     {
       fps: 10,
       qrbox: 250,
-      aspectRatio: 1.0 // <--- FORCES SQUARE SHAPE
+      aspectRatio: 1.0 // FORCE LOGICAL SQUARE
     },
     (decodedText) => {
       // Success
@@ -138,42 +144,47 @@ function startCamera(cameraId) {
     (errorMessage) => {
       // Ignore scan errors
     }
-  ).catch(err => {
+  ).then(() => {
+    // Started successfully
+  }).catch(err => {
+    isScanning = false;
     handleError(err);
   });
 }
 
 function switchCamera() {
-  // 1. Check if we have cameras to switch to
   if (!allCameras || allCameras.length < 2) {
-    alert("Only one camera available.");
+    alert("Only one camera detected!");
     return;
   }
 
-  // 2. Stop current stream
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      // 3. Increment index and wrap around
-      cameraIndex = (cameraIndex + 1) % allCameras.length;
-      
-      // 4. Start new camera
-      startCamera(allCameras[cameraIndex].id);
-    }).catch(err => {
-      console.error("Stop failed during switch", err);
-      // Try to force restart anyway
-      cameraIndex = (cameraIndex + 1) % allCameras.length;
-      startCamera(allCameras[cameraIndex].id);
+  if (!html5QrCode) return;
+
+  // Stop current stream first
+  html5QrCode.stop().then(() => {
+    isScanning = false;
+    // Cycle index
+    cameraIndex = (cameraIndex + 1) % allCameras.length;
+    // Start new
+    startCamera(allCameras[cameraIndex].id);
+  }).catch(err => {
+    console.error("Flip failed", err);
+    // Force restart if stop fails
+    isScanning = false;
+    html5QrCode.clear().then(() => {
+        startCamera(allCameras[cameraIndex].id);
     });
-  }
+  });
 }
 
 function handleError(err) {
+  isScanning = false;
   console.error("Camera Error:", err);
   
   if (err.name === "NotReadableError") {
-    alert("Camera busy. Close other browser tabs/apps.");
+    alert("Camera is busy. Close other apps/tabs.");
   } else if (err.name === "NotAllowedError") {
-    alert("Permission denied. Reset browser permissions.");
+    alert("Permission denied.");
   } else {
     alert("Error: " + err.name);
   }
@@ -184,25 +195,19 @@ function forceCloseQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.add("hidden");
   document.body.style.overflow = "";
+  isScanning = false;
 
   if (html5QrCode) {
-    // Try to stop gracefully, then clear
     try {
-      if (html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-        }).catch(() => {
-          html5QrCode.clear();
-        });
-      } else {
+      html5QrCode.stop().then(() => {
         html5QrCode.clear();
-      }
-    } catch (e) {
-      // Ignore errors
-    }
+      }).catch(() => {
+        html5QrCode.clear();
+      });
+    } catch (e) {}
   }
 }
 
-// Make globally available
+// Global exposure
 window.switchCamera = switchCamera;
 window.forceCloseQR = forceCloseQR;
