@@ -147,3 +147,41 @@ button:hover { opacity: 0.9; }
   .masonry { column-count: 1; }
   .qr-buttons button { padding: 12px; font-size: 14px; }
 }
+/* QR MODAL FIXED */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.qr-modal.hidden { display: none; }
+
+.qr-box {
+  background: #111;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* CRITICAL: Allows the camera to render properly */
+#qr-reader {
+  width: 100%;
+  height: 300px; 
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.qr-controls button {
+  width: 100%;
+  background: #333;
+}
