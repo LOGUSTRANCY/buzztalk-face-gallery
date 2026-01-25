@@ -1,61 +1,102 @@
+/* -----------------------------
+   GLOBAL
+------------------------------ */
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
   background: #fafafa;
+  color: #111;
 }
 
+/* -----------------------------
+   HEADER
+------------------------------ */
 header {
   text-align: center;
-  padding: 20px;
+  padding: 20px 14px;
 }
 
-.upload {
+header h1 {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+header p {
+  font-size: 15px;
+  color: #555;
+  margin-top: 0;
+}
+
+/* -----------------------------
+   INPUT SECTION
+------------------------------ */
+.upload-box {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 20px;
+  padding: 0 14px 16px;
+  flex-wrap: wrap;
 }
 
+.upload-box input {
+  padding: 12px 14px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 220px;
+  max-width: 100%;
+}
+
+/* -----------------------------
+   BUTTON
+------------------------------ */
 button {
   background: #e60023;
   color: white;
   border: none;
-  padding: 10px 18px;
-  border-radius: 6px;
+  padding: 12px 18px;
+  border-radius: 8px;
   font-weight: bold;
+  font-size: 16px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:hover {
   background: #c5001f;
 }
 
+/* -----------------------------
+   LOADING
+------------------------------ */
 .hidden {
   display: none;
 }
 
 #loading {
   text-align: center;
-  font-size: 18px;
-  margin: 20px;
+  font-size: 16px;
+  margin: 16px;
+  color: #444;
 }
 
+/* -----------------------------
+   GALLERY (PINTEREST)
+------------------------------ */
 .masonry {
   column-count: 4;
   column-gap: 14px;
-  padding: 16px;
+  padding: 12px;
 }
 
-@media (max-width: 1000px) {
-  .masonry { column-count: 3; }
-}
-@media (max-width: 700px) {
-  .masonry { column-count: 2; }
-}
-@media (max-width: 400px) {
-  .masonry { column-count: 1; }
-}
-
+/* -----------------------------
+   PHOTO CARD
+------------------------------ */
 .photo {
   break-inside: avoid;
   margin-bottom: 14px;
@@ -63,7 +104,7 @@ button:hover {
 
 .photo img {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .photo a {
@@ -71,5 +112,56 @@ button:hover {
   text-align: right;
   margin-top: 6px;
   font-size: 14px;
-  color: #444;
+  color: #555;
+  text-decoration: none;
+}
+
+/* -----------------------------
+   RESPONSIVE BREAKPOINTS
+------------------------------ */
+@media (max-width: 1024px) {
+  .masonry {
+    column-count: 3;
+  }
+}
+
+@media (max-width: 768px) {
+  header h1 {
+    font-size: 20px;
+  }
+
+  .masonry {
+    column-count: 2;
+  }
+
+  .upload-box {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .upload-box input {
+    width: 100%;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  header h1 {
+    font-size: 18px;
+  }
+
+  header p {
+    font-size: 14px;
+  }
+
+  .masonry {
+    column-count: 1;
+  }
+
+  .photo img {
+    border-radius: 10px;
+  }
 }
