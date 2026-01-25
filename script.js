@@ -85,63 +85,102 @@ function renderGallery(photoUrls) {
 // -------------------------------------
 // QR SCANNER (SAFE & UNLOCKABLE)
 // -------------------------------------
-let qrScanner = null;
+const API_BASE =
+  "https://buzztalk-gateway.logustrancy.workers.dev";
+
+let qr;
 let cameras = [];
+let currentCamIndex = 0;
 
-// Load cameras on page load
-window.addEventListener("load", async () => {
+/* ---------------- LOAD PHOTOS ---------------- */
+
+async function loadPhotos() {
+  const uid = document.getElementById("uid").value.trim();
+  if (!uid) return alert("Enter Unique ID");
+
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("gallery").innerHTML = "";
+
   try {
-    cameras = await Html5Qrcode.getCameras();
-    const select = document.getElementById("cameraSelect");
+    const res = await fetch(`${API_BASE}/photos?uid=${uid}`);
+    const data = await res.json();
 
-    cameras.forEach((cam, i) => {
-      const opt = document.createElement("option");
-      opt.value = cam.id;
-      opt.text = cam.label || `Camera ${i + 1}`;
-      select.appendChild(opt);
+    document.getElementById("loading").classList.add("hidden");
+
+    if (!data.photos || data.photos.length === 0) {
+      document.getElementById("gallery").innerHTML =
+        "<p style='text-align:center'>No photos found</p>";
+      return;
+    }
+
+    data.photos.forEach(url => {
+      const div = document.createElement("div");
+      div.className = "photo";
+      div.innerHTML = `
+        <img src="${url}" loading="lazy">
+        <a href="${url}" download>⬇ Download</a>
+      `;
+      document.getElementById("gallery").appendChild(div);
     });
 
-  } catch (e) {
-    alert("Camera access not available");
+  } catch {
+    alert("Failed to load photos");
   }
-});
+}
+
+/* ---------------- QR SCAN ---------------- */
 
 async function scanQR() {
-  const reader = document.getElementById("qr-reader");
-  const select = document.getElementById("cameraSelect");
+  document.getElementById("qrModal").classList.remove("hidden");
 
-  if (!select.value) {
-    alert("Please select a camera first");
+  cameras = await Html5Qrcode.getCameras();
+  if (!cameras.length) {
+    alert("No camera found");
     return;
   }
 
-  reader.style.display = "block";
-  reader.innerHTML = "";
+  const select = document.getElementById("cameraSelect");
+  select.innerHTML = "";
+  cameras.forEach((c, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.text = c.label || `Camera ${i+1}`;
+    select.appendChild(opt);
+  });
 
-  if (qrScanner) {
-    await qrScanner.stop().catch(() => {});
-  }
+  qr = new Html5Qrcode("qr-reader");
+  startCamera();
+}
 
-  qrScanner = new Html5Qrcode("qr-reader");
+function startCamera() {
+  const cam = cameras[currentCamIndex];
 
-  qrScanner.start(
-    select.value,
-    {
-      fps: 12,
-      qrbox: 240
-    },
-    (decodedText) => {
-      // ✅ READ ONLY RAW TEXT
-      const uid = decodedText.trim();
+  qr.start(
+    cam.id,
+    { fps: 15, qrbox: 220 },
+    decodedText => {
+      const uid = decodedText.trim(); // 🔑 ONLY TEXT
 
-      qrScanner.stop().catch(() => {});
-      reader.style.display = "none";
+      qr.stop();
+      closeQR();
 
       document.getElementById("uid").value = uid;
-      loadPhotos(); // SAME AS CLICKING VIEW
-    },
-    () => {}
+      loadPhotos();
+    }
   );
+}
+
+function switchCamera() {
+  if (!qr) return;
+  qr.stop().then(() => {
+    currentCamIndex = (currentCamIndex + 1) % cameras.length;
+    startCamera();
+  });
+}
+
+function closeQR() {
+  document.getElementById("qrModal").classList.add("hidden");
+  if (qr) qr.stop().catch(() => {});
 }
 
 
