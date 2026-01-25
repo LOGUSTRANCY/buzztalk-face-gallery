@@ -73,90 +73,126 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (WINDOWS/PC COMPATIBLE)
+// QR SCANNER (WINDOWS FIX + FLIP)
 // -------------------------------------
 let html5QrCode = null;
+let currentCameraId = null;
+let allCameras = [];
+let cameraIndex = 0;
 
-function scanQR() {
-  // 1. Show the Modal immediately
+async function scanQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden"; 
+  document.body.style.overflow = "hidden";
 
-  // 2. Wait 300ms for UI to render before accessing Windows Webcam
-  setTimeout(startWindowsCamera, 300);
+  // NUCLEAR OPTION: Kill stuck browser streams
+  if (window.stream) {
+    window.stream.getTracks().forEach(track => track.stop());
+  }
+
+  // Wait 300ms for UI, then start
+  setTimeout(initScanner, 300);
 }
 
-function startWindowsCamera() {
+function initScanner() {
+  if (!html5QrCode) {
+    html5QrCode = new Html5Qrcode("qr-reader");
+  }
+
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      // On Windows, devices[0] is usually the main webcam
-      const cameraId = devices[0].id;
-
-      // Init scanner if needed
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("qr-reader");
-      }
-
-      html5QrCode.start(
-        cameraId, 
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          // Success!
-          forceCloseQR(); // Stop scanning immediately
-          
-          const cleanText = decodedText.trim();
-          document.getElementById("uid").value = cleanText;
-          loadPhotos();
-        },
-        (errorMessage) => {
-          // Scanning... ignore frames
-        }
-      ).catch(err => {
-        // ERROR: Camera is busy (Windows specific handling)
-        console.error("Camera Start Error:", err);
-        alert("Camera is busy or blocked. Check if Zoom/Teams is open.");
-        
-        // IMPORTANT: Do NOT call .stop(), just hide the UI
-        hideModal();
-      });
+      allCameras = devices;
+      
+      // Default to back camera (usually last in list on Android)
+      // or find one labeled "back"
+      let backCamIndex = devices.findIndex(d => d.label.toLowerCase().includes("back"));
+      if (backCamIndex === -1) backCamIndex = devices.length - 1;
+      
+      cameraIndex = backCamIndex;
+      startCamera(allCameras[cameraIndex].id);
     } else {
-      alert("No webcam found on this PC.");
-      hideModal();
+      alert("No cameras found.");
+      forceCloseQR();
     }
   }).catch(err => {
-    alert("Permission denied. Check browser settings.");
-    hideModal();
+    handleError(err);
   });
 }
 
-// -------------------------------------
-// ROBUST CLOSE FUNCTION
-// -------------------------------------
+function startCamera(cameraId) {
+  currentCameraId = cameraId;
+  
+  html5QrCode.start(
+    cameraId,
+    {
+      fps: 10,
+      qrbox: 250,
+      // TRIANGLE FIX: Do not force aspectRatio: 1.0
+      // Let the library decide based on the device
+    },
+    (decodedText) => {
+      forceCloseQR();
+      const cleanText = decodedText.trim();
+      document.getElementById("uid").value = cleanText;
+      loadPhotos();
+    },
+    () => {}
+  ).catch(err => {
+    handleError(err);
+  });
+}
+
+function switchCamera() {
+  if (!html5QrCode || allCameras.length < 2) {
+    alert("Only one camera available.");
+    return;
+  }
+
+  // Stop current stream before switching
+  html5QrCode.stop().then(() => {
+    // Increment index
+    cameraIndex = (cameraIndex + 1) % allCameras.length;
+    startCamera(allCameras[cameraIndex].id);
+  }).catch(err => {
+    console.error("Switch failed", err);
+    // Try to force restart if stop fails
+    startCamera(allCameras[cameraIndex].id);
+  });
+}
+
+function handleError(err) {
+  console.error("Camera Error:", err);
+  if (err.name === "NotReadableError") {
+    alert("Camera blocked. Close other apps using camera.");
+  } else if (err.name === "NotAllowedError") {
+    alert("Permission denied. Reset browser permissions.");
+  } else {
+    alert("Error: " + err.name);
+  }
+  forceCloseQR();
+}
+
 function forceCloseQR() {
-  // Try to stop the camera, but don't wait for it if it hangs
+  const modal = document.getElementById("qrModal");
+  modal.classList.add("hidden");
+  document.body.style.overflow = "";
+
   if (html5QrCode) {
+    // Try to stop normally
     try {
       if (html5QrCode.isScanning) {
         html5QrCode.stop().then(() => {
           html5QrCode.clear();
-        }).catch(err => console.log("Stop error ignored", err));
+        }).catch(() => {
+          html5QrCode.clear();
+        });
       } else {
         html5QrCode.clear();
       }
     } catch (e) {
-      console.log("Cleanup error ignored", e);
+      // Ignore errors
     }
   }
-  hideModal();
 }
 
-// Helper to just hide UI instantly
-function hideModal() {
-  const modal = document.getElementById("qrModal");
-  modal.classList.add("hidden");
-  document.body.style.overflow = "";
-}
-
-// Map the HTML button to this robust function
 window.closeQR = forceCloseQR;
