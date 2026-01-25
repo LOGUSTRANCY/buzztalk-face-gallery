@@ -2,24 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Buzztalk Face Gallery</title>
+  <title>Buzztalk Photo Gallery</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <header>
-  <h1>Enjoying Buzztalk? Enjoy more by getting your images here!</h1>
-  <p>Upload a selfie and see the magic...</p>
+  <h1>Enjoying Buzztalk? 🎉</h1>
+  <p>Enter your Unique ID to view your event photos</p>
 </header>
 
 <section class="upload-box">
-  <input type="file" id="selfie" accept="image/*" />
-  <button onclick="scanFace()">Scan Face</button>
+  <input
+    type="text"
+    id="uid"
+    placeholder="Enter your Unique ID (e.g. BUZZ-001)"
+  />
+  <button onclick="loadPhotos()">View My Photos</button>
 </section>
 
 <section id="loading" class="hidden">
-  <img loading="lazy">
-Reviving your moments.
+  🔍 Fetching your moments...
 </section>
 
 <section id="gallery" class="masonry"></section>
@@ -27,4 +30,3 @@ Reviving your moments.
 <script src="script.js"></script>
 </body>
 </html>
-
