@@ -2,28 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buzztalk Photo Gallery</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
-<!-- QR MODAL MUST BE INSIDE BODY -->
 <div id="qrModal" class="qr-modal hidden">
   <div class="qr-box">
-    <div id="qr-reader"></div>
-
-    <select id="cameraSelect"></select>
-
-    <div class="qr-controls">
-      <button onclick="switchCamera()">🔄 Switch</button>
-      <button onclick="closeQR()">✖ Close</button>
+    <div id="qr-reader"></div> <div class="qr-controls">
+      <select id="cameraSelect"></select> <div class="qr-buttons">
+        <button onclick="switchCamera()">🔄 Switch</button>
+        <button onclick="closeQR()">✖ Close</button>
+      </div>
     </div>
   </div>
 </div>
-
-
-
 
 <header>
   <h1>Enjoying Buzztalk?</h1>
@@ -34,11 +32,11 @@
   <input
     type="text"
     id="uid"
-    placeholder="Enter your Unique ID (e.g. BUZZ-001)"
+    placeholder="Enter Unique ID (e.g. BUZZ-001)"
   />
   <button onclick="loadPhotos()">View My Photos</button>
   <button onclick="scanQR()">📷 Scan QR</button>
- 
+</section>
 
 <section id="loading" class="hidden">
   🔍 Fetching your moments...
