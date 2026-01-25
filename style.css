@@ -90,13 +90,24 @@ button:hover { opacity: 0.9; }
 }
 
 /* REQUIRED: Explicit height for camera to render */
+/* QR READER CONTAINER - THE BOX */
 #qr-reader {
   width: 100%;
-  height: 50vh; /* Takes half screen height on mobile */
-  max-height: 400px; 
+  max-width: 300px;
+  aspect-ratio: 1 / 1; /* Force Container Square */
+  margin: 0 auto;
   background: #000;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: hidden; /* Crop anything outside */
+  position: relative;
+}
+
+/* THE CAMERA VIDEO ITSELF - FORCE FILL */
+#qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important; /* KEY FIX: Zooms video to fill square */
+  border-radius: 12px;
 }
 
 .qr-controls {
