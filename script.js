@@ -91,52 +91,49 @@ async function scanQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
 
-  try {
-    const devices = await Html5Qrcode.getCameras();
-    if (!devices.length) {
-      alert("No camera found");
-      closeQR();
-      return;
-    }
-
-    // Prefer back camera
-    const camera =
-      devices.find(d => d.label.toLowerCase().includes("back")) ||
-      devices[devices.length - 1];
-
-    qrScanner = new Html5Qrcode("qr-reader");
-
-    setTimeout(() => {
-      qrScanner.start(
-        camera.id,
-        {
-          fps: 12,
-          qrbox: 220,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          }
-        },
-        onQRSuccess,
-        () => {}
-      );
-    }, 250);
-
-  } catch (err) {
-    console.error(err);
-    closeQR();
+  const devices = await Html5Qrcode.getCameras();
+  if (!devices.length) {
+    alert("No camera found");
+    return;
   }
+
+  const camera =
+    devices.find(d => d.label.toLowerCase().includes("back")) ||
+    devices[devices.length - 1];
+
+  qrScanner = new Html5Qrcode("qr-reader");
+
+  qrScanner.start(
+    camera.id,
+    {
+      fps: 15,
+      qrbox: 250
+    },
+    decodedText => {
+      // 👇 THIS IS THE KEY CHANGE
+      handleQRText(decodedText);
+    },
+    () => {}
+  );
 }
 
-function onQRSuccess(text) {
-  if (!text.includes("?id=")) return;
+function handleQRText(text) {
+  const uid = text.trim();
 
-  const url = new URL(text);
-  const uid = url.searchParams.get("id");
   if (!uid) return;
 
   closeQR();
+
   document.getElementById("uid").value = uid;
-  loadPhotos();
+  loadPhotos(); // SAME AS BUTTON CLICK
+}
+
+function closeQR() {
+  if (qrScanner) {
+    qrScanner.stop().catch(() => {});
+    qrScanner = null;
+  }
+  document.getElementById("qrModal").classList.add("hidden");
 }
 
 // -------------------------------------
