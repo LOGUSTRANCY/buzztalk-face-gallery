@@ -4,7 +4,7 @@
 const API_BASE = "https://buzztalk-gateway.logustrancy.workers.dev";
 
 // -------------------------------------
-// LOAD PHOTOS
+// LOAD PHOTOS (The Core Function)
 // -------------------------------------
 async function loadPhotos() {
   const uidInput = document.getElementById("uid");
@@ -61,103 +61,77 @@ function renderGallery(photoUrls) {
 }
 
 // -------------------------------------
-// AUTO LOAD ID FROM URL
-// -------------------------------------
-(function autoFill() {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-  if (id) {
-    document.getElementById("uid").value = id;
-    loadPhotos();
-  }
-})();
-
-// -------------------------------------
-// QR SCANNER (CLEAN & MOBILE READY)
+// QR SCANNER (SIMPLE VERSION - LIKE YOUR TEST FILE)
 // -------------------------------------
 let qrScanner = null;
-let cameras = [];
-let camIndex = 0;
 
-async function scanQR() {
+function scanQR() {
+  // 1. Show the modal
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden"; // Prevent background scroll
+  document.body.style.overflow = "hidden"; 
 
-  // 1. Get Cameras
-  try {
-    cameras = await Html5Qrcode.getCameras();
-    if (!cameras.length) {
-      alert("No cameras found");
-      closeQR();
-      return;
-    }
-    
-    // 2. Populate Dropdown
-    const select = document.getElementById("cameraSelect");
-    select.innerHTML = "";
-    cameras.forEach((c, i) => {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.text = c.label || `Camera ${i+1}`;
-      select.appendChild(opt);
-    });
-
-    // 3. Auto-select Back Camera
-    camIndex = cameras.findIndex(c => c.label.toLowerCase().includes("back"));
-    if (camIndex === -1) camIndex = cameras.length - 1;
-    select.value = camIndex;
-
-    select.onchange = () => {
-      camIndex = Number(select.value);
-      startCamera();
-    };
-
-    // 4. Start
+  // 2. Initialize the scanner library
+  if (!qrScanner) {
     qrScanner = new Html5Qrcode("qr-reader");
-    startCamera();
-
-  } catch (err) {
-    alert("Camera permission denied");
-    closeQR();
   }
-}
 
-function startCamera() {
-  qrScanner.start(
-    cameras[camIndex].id,
-    { fps: 15, qrbox: 250, aspectRatio: 1.0 },
-    (text) => {
-      // SUCCESS
-      const uid = text.trim(); 
-      if(uid) {
-        qrScanner.stop().catch(()=>{});
+  // 3. Get Cameras and Start (Just like your test file)
+  Html5Qrcode.getCameras().then(devices => {
+    if (devices && devices.length) {
+      
+      // Try to find the "back" camera, otherwise just use the first one (cams[0])
+      const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
+
+      qrScanner.start(
+        cameraId, 
+        {
+          fps: 10,    // Same as your test file
+          qrbox: 250  // Same as your test file
+        },
+        (decodedText) => {
+          // SUCCESS!
+          handleScanSuccess(decodedText);
+        },
+        (errorMessage) => {
+          // Scanning... ignore errors per frame
+        }
+      ).catch(err => {
+        alert("Could not start camera: " + err);
         closeQR();
-        document.getElementById("uid").value = uid;
-        loadPhotos();
-      }
-    },
-    () => {} // Ignore failures per frame
-  ).catch(err => {
-    // If start fails, just retry or ignore
-    console.log("Camera start error", err);
+      });
+    } else {
+      alert("No cameras found.");
+      closeQR();
+    }
+  }).catch(err => {
+    alert("Camera permission issue.");
+    closeQR();
   });
 }
 
-function switchCamera() {
-  camIndex = (camIndex + 1) % cameras.length;
-  document.getElementById("cameraSelect").value = camIndex;
-  if(qrScanner) {
-    qrScanner.stop().then(startCamera).catch(startCamera);
-  }
+function handleScanSuccess(text) {
+  // 1. Clean the text
+  const uid = text.trim();
+  
+  // 2. Close the scanner immediately
+  closeQR();
+
+  // 3. Auto-fill the input
+  document.getElementById("uid").value = uid;
+
+  // 4. Auto-trigger "View My Photos"
+  loadPhotos();
 }
 
 function closeQR() {
+  const modal = document.getElementById("qrModal");
+  modal.classList.add("hidden");
+  document.body.style.overflow = ""; // Enable scroll again
+
   if (qrScanner) {
-    qrScanner.stop().catch(()=>{});
-    qrScanner.clear();
-    qrScanner = null;
+    qrScanner.stop().then(() => {
+      qrScanner.clear();
+    }).catch(err => console.log(err));
   }
-  document.getElementById("qrModal").classList.add("hidden");
-  document.body.style.overflow = ""; // Restore scroll
 }
