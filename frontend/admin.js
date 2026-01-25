@@ -1,3 +1,14 @@
+const ADMIN_PASSWORD = "buzztalkebi987";
+
+if (!sessionStorage.getItem("admin")) {
+  const pwd = prompt("Enter admin password:");
+  if (pwd !== ADMIN_PASSWORD) {
+    alert("Access denied");
+    document.body.innerHTML = "";
+  } else {
+    sessionStorage.setItem("admin", "yes");
+  }
+}
 // -------------------------------------
 // CONFIG
 // -------------------------------------
