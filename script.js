@@ -129,15 +129,16 @@ function initScanner() {
 }
 
 function startCamera(cameraId) {
-  if (isScanning) return; // Prevent double start
+  if (isScanning) return;
   isScanning = true;
 
   html5QrCode.start(
     cameraId,
     {
       fps: 10,
-      qrbox: 250,
-      aspectRatio: 1.0 // FORCE SQUARE
+      qrbox: 250
+      // REMOVED aspectRatio: 1.0 
+      // We let CSS crop it into a square instead. This is cleaner.
     },
     (decodedText) => {
       // Success
