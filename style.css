@@ -148,6 +148,7 @@ button:hover { opacity: 0.9; }
   .qr-buttons button { padding: 12px; font-size: 14px; }
 }
 /* QR MODAL FIXED */
+/* QR MODAL FIXED */
 .qr-modal {
   position: fixed;
   inset: 0;
@@ -172,16 +173,30 @@ button:hover { opacity: 0.9; }
   gap: 12px;
 }
 
-/* CRITICAL: Allows the camera to render properly */
 #qr-reader {
   width: 100%;
-  height: 300px; 
+  /* FIX FOR TRIANGLE/DISTORTION: 
+     1. Min-height ensures it never collapses 
+     2. Removing border-radius on the video container helps some renders
+  */
+  min-height: 300px; 
   background: #000;
-  border-radius: 12px;
-  overflow: hidden;
+  overflow: hidden; 
+  position: relative;
+}
+
+/* Make buttons side-by-side */
+.qr-controls {
+  display: flex;
+  gap: 10px;
 }
 
 .qr-controls button {
-  width: 100%;
+  width: 50%;
   background: #333;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
 }
