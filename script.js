@@ -89,23 +89,27 @@ function renderGallery(photoUrls) {
 })();
 let qrScanner;
 let currentCamera = "environment";
+let scanning = false;
 
 function scanQR() {
-  const modal = document.getElementById("qrModal");
-  modal.classList.remove("hidden");
+  if (scanning) return;
+  scanning = true;
+
+  document.getElementById("qrModal").classList.remove("hidden");
 
   setTimeout(() => {
     qrScanner = new Html5Qrcode("qr-reader");
     startCamera();
-  }, 300); // 🔑 critical delay
+  }, 250);
 }
 
 function startCamera() {
   qrScanner.start(
     { facingMode: currentCamera },
     {
-      fps: 10,
-      qrbox: 250
+      fps: 15,
+      qrbox: { width: 220, height: 220 },
+      aspectRatio: 1.0
     },
     onQRSuccess,
     () => {}
@@ -113,23 +117,19 @@ function startCamera() {
 }
 
 function onQRSuccess(decodedText) {
+  if (!decodedText.includes("?id=")) return;
+
+  scanning = false;
   qrScanner.stop().catch(() => {});
   closeQR();
 
-  try {
-    const url = new URL(decodedText);
-    const uid = url.searchParams.get("id");
+  const url = new URL(decodedText);
+  const uid = url.searchParams.get("id");
 
-    if (!uid) {
-      alert("QR code does not contain an ID");
-      return;
-    }
+  if (!uid) return;
 
-    document.getElementById("uid").value = uid;
-    loadPhotos();
-  } catch {
-    alert("Invalid QR code");
-  }
+  document.getElementById("uid").value = uid;
+  loadPhotos();
 }
 
 function switchCamera() {
@@ -143,6 +143,7 @@ function switchCamera() {
 }
 
 function closeQR() {
+  scanning = false;
   if (qrScanner) qrScanner.stop().catch(() => {});
   document.getElementById("qrModal").classList.add("hidden");
 }
