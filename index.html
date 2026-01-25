@@ -10,14 +10,11 @@
 
 <!-- QR MODAL MUST BE INSIDE BODY -->
 <div id="qrModal" class="qr-modal hidden">
-  <div class="qr-box">
-    <div id="qr-reader"></div>
-    <div class="qr-controls">
-      <button onclick="switchCamera()">🔄 Switch Camera</button>
-      <button onclick="closeQR()">✖ Close</button>
-    </div>
-  </div>
+  <div id="qr-reader"></div>
 </div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+
 
 <header>
   <h1>Enjoying Buzztalk?</h1>
