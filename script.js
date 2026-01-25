@@ -88,41 +88,61 @@ function renderGallery(photoUrls) {
   }
 })();
 let qrScanner;
+let currentCamera = "environment";
 
 function scanQR() {
-  document.getElementById("qrModal").classList.remove("hidden");
+  const modal = document.getElementById("qrModal");
+  modal.classList.remove("hidden");
 
-  qrScanner = new Html5Qrcode("qr-reader");
+  setTimeout(() => {
+    qrScanner = new Html5Qrcode("qr-reader");
+    startCamera();
+  }, 300); // 🔑 critical delay
+}
+
+function startCamera() {
   qrScanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-      qrScanner.stop();
-      closeQR();
-
-      try {
-        const url = new URL(decodedText);
-        const uid = url.searchParams.get("id");
-
-        if (uid) {
-          document.getElementById("uid").value = uid;
-          loadPhotos();
-        } else {
-          alert("Invalid QR code");
-        }
-      } catch {
-        alert("QR does not contain a valid link");
-      }
+    { facingMode: currentCamera },
+    {
+      fps: 10,
+      qrbox: 250
     },
-    (err) => {}
+    onQRSuccess,
+    () => {}
   );
 }
 
-function closeQR() {
-  if (qrScanner) {
-    qrScanner.stop().catch(() => {});
+function onQRSuccess(decodedText) {
+  qrScanner.stop().catch(() => {});
+  closeQR();
+
+  try {
+    const url = new URL(decodedText);
+    const uid = url.searchParams.get("id");
+
+    if (!uid) {
+      alert("QR code does not contain an ID");
+      return;
+    }
+
+    document.getElementById("uid").value = uid;
+    loadPhotos();
+  } catch {
+    alert("Invalid QR code");
   }
-  document.getElementById("qrModal").classList.add("hidden");
 }
 
+function switchCamera() {
+  if (!qrScanner) return;
 
+  qrScanner.stop().then(() => {
+    currentCamera =
+      currentCamera === "environment" ? "user" : "environment";
+    startCamera();
+  });
+}
+
+function closeQR() {
+  if (qrScanner) qrScanner.stop().catch(() => {});
+  document.getElementById("qrModal").classList.add("hidden");
+}
