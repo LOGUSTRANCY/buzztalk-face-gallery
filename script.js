@@ -160,14 +160,3 @@ function closeQR() {
   document.body.style.overflow = "";
 }
 
-
-
-
-
-// -------------------------------------
-// CLOSE QR (CRITICAL – PREVENT DARK LOCK)
-// -------------------------------------
-function closeQR() {
-  document.getElementById("qrModal").classList.add("hidden");
-  if (qr) qr.stop().catch(() => {});
-}
