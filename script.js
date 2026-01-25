@@ -87,17 +87,6 @@ function renderGallery(photoUrls) {
     loadPhotos(); // auto-load ONLY for QR
   }
 })();
-
-function scanQR() {
-  if (!("mediaDevices" in navigator)) {
-    alert("Camera not supported on this device");
-    return;
-  }
-
-  alert(
-    "Scan a QR code that opens this site with ?id=YOURID\n\nExample:\nhttps://logustrancy.github.io/buzztalk-face-gallery/?id=ADM001"
-  );
-}
 let qrScanner;
 
 function scanQR() {
@@ -111,17 +100,29 @@ function scanQR() {
       qrScanner.stop();
       closeQR();
 
-      const url = new URL(decodedText);
-      const uid = url.searchParams.get("id");
-      if (uid) {
-        document.getElementById("uid").value = uid;
-        loadPhotos();
+      try {
+        const url = new URL(decodedText);
+        const uid = url.searchParams.get("id");
+
+        if (uid) {
+          document.getElementById("uid").value = uid;
+          loadPhotos();
+        } else {
+          alert("Invalid QR code");
+        }
+      } catch {
+        alert("QR does not contain a valid link");
       }
-    }
+    },
+    (err) => {}
   );
 }
 
 function closeQR() {
+  if (qrScanner) {
+    qrScanner.stop().catch(() => {});
+  }
   document.getElementById("qrModal").classList.add("hidden");
 }
+
 
