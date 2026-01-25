@@ -86,64 +86,56 @@ function renderGallery(photoUrls) {
 // QR SCANNER (SAFE & UNLOCKABLE)
 // -------------------------------------
 
-let qr;
+let qrScanner = null;
 let cameras = [];
-let currentCamIndex = 0;
+let camIndex = 0;
 
 async function scanQR() {
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
 
-  // 🔑 HARD RESET if scanner already exists
-  if (qr) {
-    try { await qr.stop(); } catch {}
-    qr = null;
+  document.body.style.overflow = "hidden";
+
+  // Create fresh scanner EVERY TIME
+  qrScanner = new Html5Qrcode("qr-reader");
+
+  cameras = await Html5Qrcode.getCameras();
+  if (!cameras.length) {
+    alert("No camera found");
+    closeQR();
+    return;
   }
 
-  // 🔑 WAIT for modal + layout to settle
-  setTimeout(async () => {
-    cameras = await Html5Qrcode.getCameras();
-    if (!cameras.length) {
-      alert("No camera found");
-      closeQR();
-      return;
-    }
-
-    populateCameraList();
-
-    qr = new Html5Qrcode("qr-reader");
-    startCamera();
-  }, 500); // 👈 THIS fixes your issue
+  fillCameraList();
+  startCamera();
 }
 
-function populateCameraList() {
-  const select = document.getElementById("cameraSelect");
-  select.innerHTML = "";
+function fillCameraList() {
+  const sel = document.getElementById("cameraSelect");
+  sel.innerHTML = "";
 
-  cameras.forEach((cam, i) => {
+  cameras.forEach((c, i) => {
     const opt = document.createElement("option");
     opt.value = i;
-    opt.text = cam.label || `Camera ${i + 1}`;
-    select.appendChild(opt);
+    opt.text = c.label || `Camera ${i+1}`;
+    sel.appendChild(opt);
   });
 
-  select.onchange = () => {
-    currentCamIndex = Number(select.value);
+  sel.onchange = () => {
+    camIndex = Number(sel.value);
     restartCamera();
   };
 }
 
 function startCamera() {
-  const cam = cameras[currentCamIndex];
-
-  qr.start(
-    cam.id,
+  qrScanner.start(
+    cameras[camIndex].id,
     { fps: 15, qrbox: 220 },
-    decodedText => {
-      const uid = decodedText.trim(); // 👈 ONLY TEXT
-      qr.stop().catch(() => {});
+    text => {
+      qrScanner.stop();
       closeQR();
 
+      const uid = text.trim(); // 🔑 ONLY TEXT
       document.getElementById("uid").value = uid;
       loadPhotos();
     }
@@ -151,8 +143,21 @@ function startCamera() {
 }
 
 function restartCamera() {
-  if (!qr) return;
-  qr.stop().then(startCamera);
+  qrScanner.stop().then(startCamera);
+}
+
+function switchCamera() {
+  camIndex = (camIndex + 1) % cameras.length;
+  restartCamera();
+}
+
+function closeQR() {
+  if (qrScanner) {
+    qrScanner.stop().catch(()=>{});
+    qrScanner = null;
+  }
+  document.getElementById("qrModal").classList.add("hidden");
+  document.body.style.overflow = "";
 }
 
 
