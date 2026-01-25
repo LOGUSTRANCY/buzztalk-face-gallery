@@ -73,41 +73,31 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (TIMING FIXED)
+// QR SCANNER (AGGRESSIVE CLEANUP VERSION)
 // -------------------------------------
 let qrScanner = null;
 
 function scanQR() {
-  // 1. Show the modal FIRST
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden"; // Prevent scrolling
+  document.body.style.overflow = "hidden"; 
 
-  // 2. WAIT for the modal to be visible before starting scanner
-  // This prevents the "Camera Not Loading" error
-  setTimeout(startScannerLogic, 300);
+  // Wait for modal to render
+  setTimeout(startScanner, 300);
 }
 
-function startScannerLogic() {
-  // If scanner already exists, clear it first to avoid duplicates
+function startScanner() {
+  // 1. Force cleanup of any lingering instances
   if (qrScanner) {
-    qrScanner.clear().then(() => {
-      initNewScanner();
-    }).catch(err => {
-      initNewScanner();
-    });
-  } else {
-    initNewScanner();
+    qrScanner.clear().catch(e => console.log(e));
+    qrScanner = null;
   }
-}
 
-function initNewScanner() {
-  // Create fresh instance
+  // 2. Create new instance
   qrScanner = new Html5Qrcode("qr-reader");
 
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      // Pick back camera if available, else first one
       const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
 
       qrScanner.start(
@@ -117,28 +107,39 @@ function initNewScanner() {
           qrbox: 250
         },
         (decodedText) => {
-          // Success!
-          closeQR(); // Close immediately
-          
+          // Success
+          closeQR();
           const cleanText = decodedText.trim();
           document.getElementById("uid").value = cleanText;
-          loadPhotos(); // Auto-load
+          loadPhotos();
         },
         (errorMessage) => {
-          // Ignore scanning errors
+          // Scanning...
         }
       ).catch(err => {
-        alert("Camera start failed: " + err);
-        closeQR();
+        handleCameraError(err);
       });
     } else {
       alert("No cameras found.");
       closeQR();
     }
   }).catch(err => {
-    alert("Camera permissions denied.");
-    closeQR();
+    handleCameraError(err);
   });
+}
+
+function handleCameraError(err) {
+  console.error(err);
+  
+  let msg = "Camera error.";
+  if (err.name === "NotReadableError") {
+    msg = "Camera is in use by another app. Please close other apps/tabs and try again.";
+  } else if (err.name === "NotAllowedError") {
+    msg = "Camera permission denied. Please allow camera access.";
+  }
+
+  alert(msg);
+  closeQR();
 }
 
 function closeQR() {
@@ -147,9 +148,11 @@ function closeQR() {
   document.body.style.overflow = "";
 
   if (qrScanner) {
-    // Stop and clear the scanner so it's fresh next time
     qrScanner.stop().then(() => {
       qrScanner.clear();
-    }).catch(err => console.log(err));
+    }).catch(() => {
+      // Force kill if library fails
+      qrScanner.clear();
+    });
   }
 }
