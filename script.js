@@ -4,7 +4,7 @@
 const API_BASE = "https://buzztalk-gateway.logustrancy.workers.dev";
 
 // -------------------------------------
-// LOAD PHOTOS (The Core Function)
+// LOAD PHOTOS
 // -------------------------------------
 async function loadPhotos() {
   const uidInput = document.getElementById("uid");
@@ -61,43 +61,54 @@ function renderGallery(photoUrls) {
 }
 
 // -------------------------------------
-// QR SCANNER (SIMPLE VERSION - LIKE YOUR TEST FILE)
+// AUTO LOAD ID FROM URL
+// -------------------------------------
+(function autoFill() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  if (id) {
+    document.getElementById("uid").value = id;
+    loadPhotos();
+  }
+})();
+
+// -------------------------------------
+// QR SCANNER (FIXED TIMING)
 // -------------------------------------
 let qrScanner = null;
 
 function scanQR() {
-  // 1. Show the modal
+  // 1. Show the modal immediately so the user sees something happening
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden"; 
 
-  // 2. Initialize the scanner library
+  // 2. Wait 300ms for the modal to render fully before starting camera
+  // THIS FIXES THE BLACK BOX ISSUE
+  setTimeout(initScanner, 300);
+}
+
+function initScanner() {
   if (!qrScanner) {
     qrScanner = new Html5Qrcode("qr-reader");
   }
 
-  // 3. Get Cameras and Start (Just like your test file)
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      
-      // Try to find the "back" camera, otherwise just use the first one (cams[0])
       const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
 
       qrScanner.start(
         cameraId, 
-        {
-          fps: 10,    // Same as your test file
-          qrbox: 250  // Same as your test file
-        },
+        { fps: 10, qrbox: 250 },
         (decodedText) => {
-          // SUCCESS!
           handleScanSuccess(decodedText);
         },
         (errorMessage) => {
-          // Scanning... ignore errors per frame
+          // ignore scan errors
         }
       ).catch(err => {
-        alert("Could not start camera: " + err);
+        console.error(err);
+        alert("Camera failed to start. Please reset permissions.");
         closeQR();
       });
     } else {
@@ -105,7 +116,8 @@ function scanQR() {
       closeQR();
     }
   }).catch(err => {
-    alert("Camera permission issue.");
+    console.error(err);
+    alert("Camera permission denied.");
     closeQR();
   });
 }
@@ -120,18 +132,20 @@ function handleScanSuccess(text) {
   // 3. Auto-fill the input
   document.getElementById("uid").value = uid;
 
-  // 4. Auto-trigger "View My Photos"
+  // 4. Auto-trigger the view function
   loadPhotos();
 }
 
 function closeQR() {
+  // 1. Force hide the modal IMMEDIATELY so the app doesn't feel stuck
   const modal = document.getElementById("qrModal");
   modal.classList.add("hidden");
-  document.body.style.overflow = ""; // Enable scroll again
+  document.body.style.overflow = "";
 
+  // 2. Clean up the camera in the background
   if (qrScanner) {
     qrScanner.stop().then(() => {
       qrScanner.clear();
-    }).catch(err => console.log(err));
+    }).catch(err => console.log("Stop failed: ", err));
   }
 }
