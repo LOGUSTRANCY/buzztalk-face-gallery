@@ -1,43 +1,88 @@
-const WORKER_MATCH =
-  "https://buzztalk-gateway.YOURNAME.workers.dev/match";
+// -------------------------------------
+// CONFIG — CHANGE ONLY THIS IF NEEDED
+// -------------------------------------
 
-async function scan() {
-  const file = document.getElementById("selfie").files[0];
-  if (!file) return alert("Upload a selfie");
+const API_BASE =
+  "https://buzztalk-gateway.logustrancy.workers.dev";
 
-  document.getElementById("gallery").innerHTML = "";
-  document.getElementById("loading").classList.remove("hidden");
+// -------------------------------------
+// MAIN FUNCTION
+// -------------------------------------
 
-  const fd = new FormData();
-  fd.append("photo", file);
+async function loadPhotos() {
+  const uidInput = document.getElementById("uid");
+  const uid = uidInput.value.trim();
 
-  const res = await fetch(WORKER_MATCH, {
-    method: "POST",
-    body: fd
-  });
-
-  const data = await res.json();
-  document.getElementById("loading").classList.add("hidden");
-
-  if (!data.photos || data.photos.length === 0) {
-    document.getElementById("gallery").innerHTML =
-      "<p style='text-align:center'>No photos found</p>";
+  if (!uid) {
+    alert("Please enter your Unique ID");
     return;
   }
 
-  renderPhotos(data.photos);
-}
-
-function renderPhotos(urls) {
+  const loading = document.getElementById("loading");
   const gallery = document.getElementById("gallery");
 
-  urls.forEach(url => {
+  // Reset UI
+  gallery.innerHTML = "";
+  loading.classList.remove("hidden");
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/photos?uid=${encodeURIComponent(uid)}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch photos");
+    }
+
+    const data = await response.json();
+
+    loading.classList.add("hidden");
+
+    if (!data.photos || data.photos.length === 0) {
+      gallery.innerHTML =
+        "<p style='text-align:center'>No photos found for this ID.</p>";
+      return;
+    }
+
+    renderGallery(data.photos);
+
+  } catch (error) {
+    loading.classList.add("hidden");
+    gallery.innerHTML =
+      "<p style='text-align:center;color:red'>Something went wrong. Please try again.</p>";
+    console.error(error);
+  }
+}
+
+// -------------------------------------
+// RENDER PHOTOS (PINTEREST STYLE)
+// -------------------------------------
+
+function renderGallery(photoUrls) {
+  const gallery = document.getElementById("gallery");
+
+  photoUrls.forEach(url => {
     const div = document.createElement("div");
     div.className = "photo";
+
     div.innerHTML = `
-      <img src="${url}" loading="lazy">
+      <img src="${url}" loading="lazy" alt="Event photo">
       <a href="${url}" download target="_blank">⬇ Download</a>
     `;
+
     gallery.appendChild(div);
   });
 }
+
+// -------------------------------------
+// OPTIONAL: AUTO-LOAD ID FROM URL (?id=)
+// -------------------------------------
+
+(function autoFillFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const idFromQR = params.get("id");
+
+  if (idFromQR) {
+    document.getElementById("uid").value = idFromQR;
+  }
+})();
