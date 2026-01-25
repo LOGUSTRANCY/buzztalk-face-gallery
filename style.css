@@ -175,13 +175,12 @@ button:hover { opacity: 0.9; }
 
 #qr-reader {
   width: 100%;
-  /* FIX FOR TRIANGLE/DISTORTION: 
-     1. Min-height ensures it never collapses 
-     2. Removing border-radius on the video container helps some renders
-  */
-  min-height: 300px; 
+  max-width: 300px; /* Limits width so it doesn't get huge */
+  aspect-ratio: 1 / 1; /* FORCES SQUARE SHAPE */
+  margin: 0 auto;   /* Centers it */
   background: #000;
-  overflow: hidden; 
+  border-radius: 12px;
+  overflow: hidden;
   position: relative;
 }
 
