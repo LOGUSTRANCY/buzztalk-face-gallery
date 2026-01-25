@@ -92,64 +92,47 @@ let qr;
 let cameras = [];
 let currentCamIndex = 0;
 
-/* ---------------- LOAD PHOTOS ---------------- */
+async function scanQR() {
+  const modal = document.getElementById("qrModal");
+  modal.classList.remove("hidden");
 
-async function loadPhotos() {
-  const uid = document.getElementById("uid").value.trim();
-  if (!uid) return alert("Enter Unique ID");
+  // 🔑 HARD RESET if scanner already exists
+  if (qr) {
+    try { await qr.stop(); } catch {}
+    qr = null;
+  }
 
-  document.getElementById("loading").classList.remove("hidden");
-  document.getElementById("gallery").innerHTML = "";
-
-  try {
-    const res = await fetch(`${API_BASE}/photos?uid=${uid}`);
-    const data = await res.json();
-
-    document.getElementById("loading").classList.add("hidden");
-
-    if (!data.photos || data.photos.length === 0) {
-      document.getElementById("gallery").innerHTML =
-        "<p style='text-align:center'>No photos found</p>";
+  // 🔑 WAIT for modal + layout to settle
+  setTimeout(async () => {
+    cameras = await Html5Qrcode.getCameras();
+    if (!cameras.length) {
+      alert("No camera found");
+      closeQR();
       return;
     }
 
-    data.photos.forEach(url => {
-      const div = document.createElement("div");
-      div.className = "photo";
-      div.innerHTML = `
-        <img src="${url}" loading="lazy">
-        <a href="${url}" download>⬇ Download</a>
-      `;
-      document.getElementById("gallery").appendChild(div);
-    });
+    populateCameraList();
 
-  } catch {
-    alert("Failed to load photos");
-  }
+    qr = new Html5Qrcode("qr-reader");
+    startCamera();
+  }, 500); // 👈 THIS fixes your issue
 }
 
-/* ---------------- QR SCAN ---------------- */
-
-async function scanQR() {
-  document.getElementById("qrModal").classList.remove("hidden");
-
-  cameras = await Html5Qrcode.getCameras();
-  if (!cameras.length) {
-    alert("No camera found");
-    return;
-  }
-
+function populateCameraList() {
   const select = document.getElementById("cameraSelect");
   select.innerHTML = "";
-  cameras.forEach((c, i) => {
+
+  cameras.forEach((cam, i) => {
     const opt = document.createElement("option");
     opt.value = i;
-    opt.text = c.label || `Camera ${i+1}`;
+    opt.text = cam.label || `Camera ${i + 1}`;
     select.appendChild(opt);
   });
 
-  qr = new Html5Qrcode("qr-reader");
-  startCamera();
+  select.onchange = () => {
+    currentCamIndex = Number(select.value);
+    restartCamera();
+  };
 }
 
 function startCamera() {
@@ -159,9 +142,8 @@ function startCamera() {
     cam.id,
     { fps: 15, qrbox: 220 },
     decodedText => {
-      const uid = decodedText.trim(); // 🔑 ONLY TEXT
-
-      qr.stop();
+      const uid = decodedText.trim(); // 👈 ONLY TEXT
+      qr.stop().catch(() => {});
       closeQR();
 
       document.getElementById("uid").value = uid;
@@ -170,27 +152,19 @@ function startCamera() {
   );
 }
 
-function switchCamera() {
+function restartCamera() {
   if (!qr) return;
-  qr.stop().then(() => {
-    currentCamIndex = (currentCamIndex + 1) % cameras.length;
-    startCamera();
-  });
+  qr.stop().then(startCamera);
 }
 
-function closeQR() {
-  document.getElementById("qrModal").classList.add("hidden");
-  if (qr) qr.stop().catch(() => {});
-}
+
+
 
 
 // -------------------------------------
 // CLOSE QR (CRITICAL – PREVENT DARK LOCK)
 // -------------------------------------
 function closeQR() {
-  if (qrScanner) {
-    qrScanner.stop().catch(() => {});
-    qrScanner = null;
-  }
   document.getElementById("qrModal").classList.add("hidden");
+  if (qr) qr.stop().catch(() => {});
 }
