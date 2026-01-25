@@ -87,63 +87,49 @@ function renderGallery(photoUrls) {
     loadPhotos(); // auto-load ONLY for QR
   }
 })();
-let qrScanner;
-let currentCamera = "environment";
-let scanning = false;
+let qr;
 
-function scanQR() {
-  if (scanning) return;
-  scanning = true;
-
+async function scanQR() {
   document.getElementById("qrModal").classList.remove("hidden");
 
+  const devices = await Html5Qrcode.getCameras();
+  if (!devices || devices.length === 0) {
+    alert("No camera found");
+    return;
+  }
+
+  // Prefer back camera if available
+  const backCam =
+    devices.find(d => d.label.toLowerCase().includes("back")) ||
+    devices[devices.length - 1];
+
+  qr = new Html5Qrcode("qr-reader");
+
   setTimeout(() => {
-    qrScanner = new Html5Qrcode("qr-reader");
-    startCamera();
-  }, 250);
-}
+    qr.start(
+      backCam.id,
+      {
+        fps: 12,
+        qrbox: 220,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
+      },
+      (text) => {
+        if (!text.includes("?id=")) return;
 
-function startCamera() {
-  qrScanner.start(
-    { facingMode: currentCamera },
-    {
-      fps: 15,
-      qrbox: { width: 220, height: 220 },
-      aspectRatio: 1.0
-    },
-    onQRSuccess,
-    () => {}
-  );
-}
+        qr.stop().catch(() => {});
+        document.getElementById("qrModal").classList.add("hidden");
 
-function onQRSuccess(decodedText) {
-  if (!decodedText.includes("?id=")) return;
+        const url = new URL(text);
+        const uid = url.searchParams.get("id");
 
-  scanning = false;
-  qrScanner.stop().catch(() => {});
-  closeQR();
+        if (!uid) return;
 
-  const url = new URL(decodedText);
-  const uid = url.searchParams.get("id");
-
-  if (!uid) return;
-
-  document.getElementById("uid").value = uid;
-  loadPhotos();
-}
-
-function switchCamera() {
-  if (!qrScanner) return;
-
-  qrScanner.stop().then(() => {
-    currentCamera =
-      currentCamera === "environment" ? "user" : "environment";
-    startCamera();
-  });
-}
-
-function closeQR() {
-  scanning = false;
-  if (qrScanner) qrScanner.stop().catch(() => {});
-  document.getElementById("qrModal").classList.add("hidden");
+        document.getElementById("uid").value = uid;
+        loadPhotos();
+      },
+      () => {}
+    );
+  }, 300);
 }
