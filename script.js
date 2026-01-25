@@ -86,3 +86,14 @@ function renderGallery(photoUrls) {
     document.getElementById("uid").value = idFromQR;
   }
 })();
+function scanQR() {
+  if (!("mediaDevices" in navigator)) {
+    alert("Camera not supported on this device");
+    return;
+  }
+
+  alert(
+    "Scan a QR code that opens this site with ?id=YOURID\n\nExample:\nhttps://logustrancy.github.io/buzztalk-face-gallery/?id=ADM001"
+  );
+}
+
