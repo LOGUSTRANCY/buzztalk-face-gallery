@@ -73,10 +73,9 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (WINDOWS FIX + FLIP)
+// QR SCANNER (SQUARE + FLIP FIXED)
 // -------------------------------------
 let html5QrCode = null;
-let currentCameraId = null;
 let allCameras = [];
 let cameraIndex = 0;
 
@@ -85,30 +84,32 @@ async function scanQR() {
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 
-  // NUCLEAR OPTION: Kill stuck browser streams
+  // 1. ZOMBIE KILLER: Stop existing browser streams
   if (window.stream) {
     window.stream.getTracks().forEach(track => track.stop());
   }
+  
+  // 2. Clear previous instance safely
+  if (html5QrCode) {
+    try { await html5QrCode.clear(); } catch(e) {}
+    html5QrCode = null;
+  }
 
-  // Wait 300ms for UI, then start
+  // 3. Wait for UI then init
   setTimeout(initScanner, 300);
 }
 
 function initScanner() {
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("qr-reader");
-  }
+  html5QrCode = new Html5Qrcode("qr-reader");
 
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
       allCameras = devices;
       
-      // Default to back camera (usually last in list on Android)
-      // or find one labeled "back"
-      let backCamIndex = devices.findIndex(d => d.label.toLowerCase().includes("back"));
-      if (backCamIndex === -1) backCamIndex = devices.length - 1;
+      // Default to back camera (last one usually)
+      cameraIndex = devices.length - 1; 
       
-      cameraIndex = backCamIndex;
+      // Start the camera
       startCamera(allCameras[cameraIndex].id);
     } else {
       alert("No cameras found.");
@@ -120,50 +121,57 @@ function initScanner() {
 }
 
 function startCamera(cameraId) {
-  currentCameraId = cameraId;
-  
   html5QrCode.start(
     cameraId,
     {
       fps: 10,
       qrbox: 250,
-      // TRIANGLE FIX: Do not force aspectRatio: 1.0
-      // Let the library decide based on the device
+      aspectRatio: 1.0 // <--- FORCES SQUARE SHAPE
     },
     (decodedText) => {
+      // Success
       forceCloseQR();
       const cleanText = decodedText.trim();
       document.getElementById("uid").value = cleanText;
       loadPhotos();
     },
-    () => {}
+    (errorMessage) => {
+      // Ignore scan errors
+    }
   ).catch(err => {
     handleError(err);
   });
 }
 
 function switchCamera() {
-  if (!html5QrCode || allCameras.length < 2) {
+  // 1. Check if we have cameras to switch to
+  if (!allCameras || allCameras.length < 2) {
     alert("Only one camera available.");
     return;
   }
 
-  // Stop current stream before switching
-  html5QrCode.stop().then(() => {
-    // Increment index
-    cameraIndex = (cameraIndex + 1) % allCameras.length;
-    startCamera(allCameras[cameraIndex].id);
-  }).catch(err => {
-    console.error("Switch failed", err);
-    // Try to force restart if stop fails
-    startCamera(allCameras[cameraIndex].id);
-  });
+  // 2. Stop current stream
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      // 3. Increment index and wrap around
+      cameraIndex = (cameraIndex + 1) % allCameras.length;
+      
+      // 4. Start new camera
+      startCamera(allCameras[cameraIndex].id);
+    }).catch(err => {
+      console.error("Stop failed during switch", err);
+      // Try to force restart anyway
+      cameraIndex = (cameraIndex + 1) % allCameras.length;
+      startCamera(allCameras[cameraIndex].id);
+    });
+  }
 }
 
 function handleError(err) {
   console.error("Camera Error:", err);
+  
   if (err.name === "NotReadableError") {
-    alert("Camera blocked. Close other apps using camera.");
+    alert("Camera busy. Close other browser tabs/apps.");
   } else if (err.name === "NotAllowedError") {
     alert("Permission denied. Reset browser permissions.");
   } else {
@@ -178,7 +186,7 @@ function forceCloseQR() {
   document.body.style.overflow = "";
 
   if (html5QrCode) {
-    // Try to stop normally
+    // Try to stop gracefully, then clear
     try {
       if (html5QrCode.isScanning) {
         html5QrCode.stop().then(() => {
@@ -195,4 +203,6 @@ function forceCloseQR() {
   }
 }
 
-window.closeQR = forceCloseQR;
+// Make globally available
+window.switchCamera = switchCamera;
+window.forceCloseQR = forceCloseQR;
