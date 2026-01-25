@@ -185,4 +185,41 @@ button:active {
 @media (max-width: 420px) {
   .masonry { column-count: 1; }
   header h1 { font-size: 20px; }
+}.qr-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
+
+.qr-box {
+  background: #000;
+  padding: 14px;
+  border-radius: 14px;
+  width: 320px;
+  box-shadow: 0 0 40px rgba(255,0,50,.4);
+}
+
+#qr-reader {
+  width: 100%;
+}
+
+.qr-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.qr-controls button {
+  flex: 1;
+  margin: 0 4px;
+  background: #e60023;
+  border-radius: 8px;
+  padding: 10px;
+  color: white;
+  font-weight: bold;
+}
+
