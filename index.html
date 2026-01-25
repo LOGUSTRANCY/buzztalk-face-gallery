@@ -9,11 +9,12 @@
 <body>
 
 <!-- QR MODAL MUST BE INSIDE BODY -->
-<div id="qrModal" class="qr-modal hidden">
-  <div id="qr-reader"></div>
+<div id="qrModal" class="qr-modal hidden" onclick="closeQR()">
+  <div id="qr-reader" onclick="event.stopPropagation()"></div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+
 
 
 <header>
