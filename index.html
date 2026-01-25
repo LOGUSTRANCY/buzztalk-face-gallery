@@ -5,17 +5,21 @@
   <title>Buzztalk Photo Gallery</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-
-<div id="qrModal" class="qr-modal hidden">
-  <div id="qr-reader"></div>
-  <button onclick="closeQR()">Close</button>
-</div>
 
 <body>
 
+<!-- QR MODAL MUST BE INSIDE BODY -->
+<div id="qrModal" class="qr-modal hidden">
+  <div class="qr-box">
+    <div id="qr-reader"></div>
+    <div class="qr-controls">
+      <button onclick="switchCamera()">🔄 Switch Camera</button>
+      <button onclick="closeQR()">✖ Close</button>
+    </div>
+  </div>
+</div>
+
 <header>
-  <img scr="">
   <h1>Enjoying Buzztalk?</h1>
   <p>Enter your Unique ID or scan your QR to view your event photos</p>
 </header>
@@ -28,7 +32,6 @@
   />
   <button onclick="loadPhotos()">View My Photos</button>
   <button onclick="scanQR()">📷 Scan QR</button>
-
 </section>
 
 <section id="loading" class="hidden">
@@ -37,6 +40,7 @@
 
 <section id="gallery" class="masonry"></section>
 
+<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
 <script src="script.js"></script>
 </body>
 </html>
