@@ -196,25 +196,28 @@ button:active {
   z-index: 9999;
 }
 
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.qr-modal.hidden {
+  display: none;
+}
+
 .qr-box {
   background: #000;
   padding: 16px;
   border-radius: 16px;
-  width: 90%;
-  max-width: 360px;
+  width: 320px;
 }
 
 #qr-reader {
   width: 100%;
-}
-
-.qr-controls {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-}
-
-.qr-controls select,
-.qr-controls button {
-  flex: 1;
+  height: 260px; /* 🔑 ABSOLUTELY REQUIRED */
 }
