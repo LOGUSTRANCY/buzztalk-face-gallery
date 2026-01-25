@@ -82,10 +82,11 @@ function renderGallery(photoUrls) {
   const params = new URLSearchParams(window.location.search);
   const idFromQR = params.get("id");
 
-  if (idFromQR) {
-    document.getElementById("uid").value = idFromQR;
+  if (idFromQR && idFromQR.trim() !== "") {
+    document.getElementById("uid").value = idFromQR.trim();
   }
 })();
+
 function scanQR() {
   if (!("mediaDevices" in navigator)) {
     alert("Camera not supported on this device");
