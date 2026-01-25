@@ -73,86 +73,90 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (AGGRESSIVE CLEANUP VERSION)
+// QR SCANNER (WINDOWS/PC COMPATIBLE)
 // -------------------------------------
-let qrScanner = null;
+let html5QrCode = null;
 
 function scanQR() {
+  // 1. Show the Modal immediately
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden"; 
 
-  // Wait for modal to render
-  setTimeout(startScanner, 300);
+  // 2. Wait 300ms for UI to render before accessing Windows Webcam
+  setTimeout(startWindowsCamera, 300);
 }
 
-function startScanner() {
-  // 1. Force cleanup of any lingering instances
-  if (qrScanner) {
-    qrScanner.clear().catch(e => console.log(e));
-    qrScanner = null;
-  }
-
-  // 2. Create new instance
-  qrScanner = new Html5Qrcode("qr-reader");
-
+function startWindowsCamera() {
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
+      // On Windows, devices[0] is usually the main webcam
+      const cameraId = devices[0].id;
 
-      qrScanner.start(
-        cameraId,
-        {
-          fps: 10,
-          qrbox: 250
-        },
+      // Init scanner if needed
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("qr-reader");
+      }
+
+      html5QrCode.start(
+        cameraId, 
+        { fps: 10, qrbox: 250 },
         (decodedText) => {
-          // Success
-          closeQR();
+          // Success!
+          forceCloseQR(); // Stop scanning immediately
+          
           const cleanText = decodedText.trim();
           document.getElementById("uid").value = cleanText;
           loadPhotos();
         },
         (errorMessage) => {
-          // Scanning...
+          // Scanning... ignore frames
         }
       ).catch(err => {
-        handleCameraError(err);
+        // ERROR: Camera is busy (Windows specific handling)
+        console.error("Camera Start Error:", err);
+        alert("Camera is busy or blocked. Check if Zoom/Teams is open.");
+        
+        // IMPORTANT: Do NOT call .stop(), just hide the UI
+        hideModal();
       });
     } else {
-      alert("No cameras found.");
-      closeQR();
+      alert("No webcam found on this PC.");
+      hideModal();
     }
   }).catch(err => {
-    handleCameraError(err);
+    alert("Permission denied. Check browser settings.");
+    hideModal();
   });
 }
 
-function handleCameraError(err) {
-  console.error(err);
-  
-  let msg = "Camera error.";
-  if (err.name === "NotReadableError") {
-    msg = "Camera is in use by another app. Please close other apps/tabs and try again.";
-  } else if (err.name === "NotAllowedError") {
-    msg = "Camera permission denied. Please allow camera access.";
+// -------------------------------------
+// ROBUST CLOSE FUNCTION
+// -------------------------------------
+function forceCloseQR() {
+  // Try to stop the camera, but don't wait for it if it hangs
+  if (html5QrCode) {
+    try {
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+        }).catch(err => console.log("Stop error ignored", err));
+      } else {
+        html5QrCode.clear();
+      }
+    } catch (e) {
+      console.log("Cleanup error ignored", e);
+    }
   }
-
-  alert(msg);
-  closeQR();
+  hideModal();
 }
 
-function closeQR() {
+// Helper to just hide UI instantly
+function hideModal() {
   const modal = document.getElementById("qrModal");
   modal.classList.add("hidden");
   document.body.style.overflow = "";
-
-  if (qrScanner) {
-    qrScanner.stop().then(() => {
-      qrScanner.clear();
-    }).catch(() => {
-      // Force kill if library fails
-      qrScanner.clear();
-    });
-  }
 }
+
+// Map the HTML button to this robust function
+window.closeQR = forceCloseQR;
