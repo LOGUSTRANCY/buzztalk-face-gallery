@@ -73,42 +73,59 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (FIXED TIMING)
+// QR SCANNER (SIMPLE VERSION)
 // -------------------------------------
-let qrScanner = null;
+let html5QrCode;
 
 function scanQR() {
-  // 1. Show the modal immediately so the user sees something happening
+  // 1. Unhide the modal FIRST so the div is visible to the library
   const modal = document.getElementById("qrModal");
   modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden"; 
+  document.body.style.overflow = "hidden"; // Lock scroll
 
-  // 2. Wait 300ms for the modal to render fully before starting camera
-  // THIS FIXES THE BLACK BOX ISSUE
-  setTimeout(initScanner, 300);
-}
-
-function initScanner() {
-  if (!qrScanner) {
-    qrScanner = new Html5Qrcode("qr-reader");
+  // 2. Initialize library if not already done
+  if (!html5QrCode) {
+    html5QrCode = new Html5Qrcode("qr-reader");
   }
 
+  // 3. Get Cameras and Start (Exact logic from your working test file)
   Html5Qrcode.getCameras().then(devices => {
     if (devices && devices.length) {
-      const cameraId = devices.find(d => d.label.toLowerCase().includes("back"))?.id || devices[0].id;
+      
+      // Try to select back camera, otherwise use the first one available
+      let cameraId = devices[0].id;
+      const backCam = devices.find(d => d.label.toLowerCase().includes("back"));
+      if (backCam) {
+        cameraId = backCam.id;
+      }
 
-      qrScanner.start(
+      // Start scanning
+      html5QrCode.start(
         cameraId, 
-        { fps: 10, qrbox: 250 },
+        {
+          fps: 10,
+          qrbox: 250
+        },
         (decodedText) => {
-          handleScanSuccess(decodedText);
+          // --- SUCCESS CALLBACK ---
+          console.log(`Scan result: ${decodedText}`);
+          
+          // Stop scanning
+          closeQR();
+
+          // Auto-fill input
+          const cleanText = decodedText.trim();
+          document.getElementById("uid").value = cleanText;
+
+          // Auto-trigger view photos
+          loadPhotos();
         },
         (errorMessage) => {
-          // ignore scan errors
+          // Parse error, ignore it
         }
       ).catch(err => {
-        console.error(err);
-        alert("Camera failed to start. Please reset permissions.");
+        // Start failed
+        alert("Error starting camera: " + err);
         closeQR();
       });
     } else {
@@ -116,36 +133,23 @@ function initScanner() {
       closeQR();
     }
   }).catch(err => {
-    console.error(err);
-    alert("Camera permission denied.");
+    alert("Camera permission error: " + err);
     closeQR();
   });
 }
 
-function handleScanSuccess(text) {
-  // 1. Clean the text
-  const uid = text.trim();
-  
-  // 2. Close the scanner immediately
-  closeQR();
-
-  // 3. Auto-fill the input
-  document.getElementById("uid").value = uid;
-
-  // 4. Auto-trigger the view function
-  loadPhotos();
-}
-
 function closeQR() {
-  // 1. Force hide the modal IMMEDIATELY so the app doesn't feel stuck
   const modal = document.getElementById("qrModal");
   modal.classList.add("hidden");
-  document.body.style.overflow = "";
+  document.body.style.overflow = ""; // Unlock scroll
 
-  // 2. Clean up the camera in the background
-  if (qrScanner) {
-    qrScanner.stop().then(() => {
-      qrScanner.clear();
-    }).catch(err => console.log("Stop failed: ", err));
+  if (html5QrCode) {
+    // Stop the camera
+    html5QrCode.stop().then(() => {
+      // clear() removes the video element from the DOM to reset it
+      html5QrCode.clear();
+    }).catch(err => {
+      console.log("Failed to stop/clear", err);
+    });
   }
 }
