@@ -98,4 +98,30 @@ function scanQR() {
     "Scan a QR code that opens this site with ?id=YOURID\n\nExample:\nhttps://logustrancy.github.io/buzztalk-face-gallery/?id=ADM001"
   );
 }
+let qrScanner;
+
+function scanQR() {
+  document.getElementById("qrModal").classList.remove("hidden");
+
+  qrScanner = new Html5Qrcode("qr-reader");
+  qrScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      qrScanner.stop();
+      closeQR();
+
+      const url = new URL(decodedText);
+      const uid = url.searchParams.get("id");
+      if (uid) {
+        document.getElementById("uid").value = uid;
+        loadPhotos();
+      }
+    }
+  );
+}
+
+function closeQR() {
+  document.getElementById("qrModal").classList.add("hidden");
+}
 
