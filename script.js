@@ -45,16 +45,21 @@ async function loadPhotos() {
 }
 
 // -------------------------------------
-// RENDER GALLERY
+// RENDER GALLERY (STRICT .JPG DOWNLOAD)
 // -------------------------------------
 function renderGallery(photoUrls) {
   const gallery = document.getElementById("gallery");
-  photoUrls.forEach(url => {
+  
+  photoUrls.forEach((url, index) => {
     const div = document.createElement("div");
     div.className = "photo";
+    
+    // Create a strict filename like "Buzztalk_Event_1.jpg"
+    const fileName = `Buzztalk_Event_${index + 1}.jpg`;
+
     div.innerHTML = `
       <img src="${url}" loading="lazy" alt="Event photo">
-      <a href="${url}" download target="_blank">⬇ Download</a>
+      <a href="${url}" download="${fileName}" target="_blank">⬇ Download</a>
     `;
     gallery.appendChild(div);
   });
@@ -73,7 +78,7 @@ function renderGallery(photoUrls) {
 })();
 
 // -------------------------------------
-// QR SCANNER (SQUARE + FLIP FIXED)
+// QR SCANNER (THE WORKING VERSION)
 // -------------------------------------
 let html5QrCode = null;
 let allCameras = [];
@@ -132,7 +137,7 @@ function startCamera(cameraId) {
     {
       fps: 10,
       qrbox: 250,
-      aspectRatio: 1.0 // FORCE LOGICAL SQUARE
+      aspectRatio: 1.0 // FORCE SQUARE
     },
     (decodedText) => {
       // Success
