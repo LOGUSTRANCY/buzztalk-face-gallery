@@ -85,8 +85,6 @@ function renderGallery(photoUrls) {
 // -------------------------------------
 // QR SCANNER (SAFE & UNLOCKABLE)
 // -------------------------------------
-const API_BASE =
-  "https://buzztalk-gateway.logustrancy.workers.dev";
 
 let qr;
 let cameras = [];
