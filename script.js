@@ -84,6 +84,7 @@ function renderGallery(photoUrls) {
 
   if (idFromQR && idFromQR.trim() !== "") {
     document.getElementById("uid").value = idFromQR.trim();
+    loadPhotos(); // auto-load ONLY for QR
   }
 })();
 
