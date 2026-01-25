@@ -1,14 +1,12 @@
 // -------------------------------------
-// CONFIG — CHANGE ONLY THIS IF NEEDED
+// CONFIG
 // -------------------------------------
-
 const API_BASE =
   "https://buzztalk-gateway.logustrancy.workers.dev";
 
 // -------------------------------------
-// MAIN FUNCTION
+// LOAD PHOTOS
 // -------------------------------------
-
 async function loadPhotos() {
   const uidInput = document.getElementById("uid");
   const uid = uidInput.value.trim();
@@ -21,7 +19,6 @@ async function loadPhotos() {
   const loading = document.getElementById("loading");
   const gallery = document.getElementById("gallery");
 
-  // Reset UI
   gallery.innerHTML = "";
   loading.classList.remove("hidden");
 
@@ -35,7 +32,6 @@ async function loadPhotos() {
     }
 
     const data = await response.json();
-
     loading.classList.add("hidden");
 
     if (!data.photos || data.photos.length === 0) {
@@ -49,15 +45,14 @@ async function loadPhotos() {
   } catch (error) {
     loading.classList.add("hidden");
     gallery.innerHTML =
-      "<p style='text-align:center;color:red'>Something went wrong. Please try again.</p>";
+      "<p style='text-align:center;color:red'>Something went wrong.</p>";
     console.error(error);
   }
 }
 
 // -------------------------------------
-// RENDER PHOTOS (PINTEREST STYLE)
+// RENDER GALLERY
 // -------------------------------------
-
 function renderGallery(photoUrls) {
   const gallery = document.getElementById("gallery");
 
@@ -75,61 +70,82 @@ function renderGallery(photoUrls) {
 }
 
 // -------------------------------------
-// OPTIONAL: AUTO-LOAD ID FROM URL (?id=)
+// AUTO LOAD FROM URL (?id=)
 // -------------------------------------
-
 (function autoFillFromURL() {
   const params = new URLSearchParams(window.location.search);
   const idFromQR = params.get("id");
 
   if (idFromQR && idFromQR.trim() !== "") {
     document.getElementById("uid").value = idFromQR.trim();
-    loadPhotos(); // auto-load ONLY for QR
+    loadPhotos();
   }
 })();
-let qr;
+
+// -------------------------------------
+// QR SCANNER (SAFE & UNLOCKABLE)
+// -------------------------------------
+let qrScanner = null;
 
 async function scanQR() {
-  document.getElementById("qrModal").classList.remove("hidden");
+  const modal = document.getElementById("qrModal");
+  modal.classList.remove("hidden");
 
-  const devices = await Html5Qrcode.getCameras();
-  if (!devices || devices.length === 0) {
-    alert("No camera found");
-    return;
+  try {
+    const devices = await Html5Qrcode.getCameras();
+    if (!devices.length) {
+      alert("No camera found");
+      closeQR();
+      return;
+    }
+
+    // Prefer back camera
+    const camera =
+      devices.find(d => d.label.toLowerCase().includes("back")) ||
+      devices[devices.length - 1];
+
+    qrScanner = new Html5Qrcode("qr-reader");
+
+    setTimeout(() => {
+      qrScanner.start(
+        camera.id,
+        {
+          fps: 12,
+          qrbox: 220,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        },
+        onQRSuccess,
+        () => {}
+      );
+    }, 250);
+
+  } catch (err) {
+    console.error(err);
+    closeQR();
   }
+}
 
-  // Prefer back camera if available
-  const backCam =
-    devices.find(d => d.label.toLowerCase().includes("back")) ||
-    devices[devices.length - 1];
+function onQRSuccess(text) {
+  if (!text.includes("?id=")) return;
 
-  qr = new Html5Qrcode("qr-reader");
+  const url = new URL(text);
+  const uid = url.searchParams.get("id");
+  if (!uid) return;
 
-  setTimeout(() => {
-    qr.start(
-      backCam.id,
-      {
-        fps: 12,
-        qrbox: 220,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      },
-      (text) => {
-        if (!text.includes("?id=")) return;
+  closeQR();
+  document.getElementById("uid").value = uid;
+  loadPhotos();
+}
 
-        qr.stop().catch(() => {});
-        document.getElementById("qrModal").classList.add("hidden");
-
-        const url = new URL(text);
-        const uid = url.searchParams.get("id");
-
-        if (!uid) return;
-
-        document.getElementById("uid").value = uid;
-        loadPhotos();
-      },
-      () => {}
-    );
-  }, 300);
+// -------------------------------------
+// CLOSE QR (CRITICAL – PREVENT DARK LOCK)
+// -------------------------------------
+function closeQR() {
+  if (qrScanner) {
+    qrScanner.stop().catch(() => {});
+    qrScanner = null;
+  }
+  document.getElementById("qrModal").classList.add("hidden");
 }
