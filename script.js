@@ -86,55 +86,64 @@ function renderGallery(photoUrls) {
 // QR SCANNER (SAFE & UNLOCKABLE)
 // -------------------------------------
 let qrScanner = null;
+let cameras = [];
+
+// Load cameras on page load
+window.addEventListener("load", async () => {
+  try {
+    cameras = await Html5Qrcode.getCameras();
+    const select = document.getElementById("cameraSelect");
+
+    cameras.forEach((cam, i) => {
+      const opt = document.createElement("option");
+      opt.value = cam.id;
+      opt.text = cam.label || `Camera ${i + 1}`;
+      select.appendChild(opt);
+    });
+
+  } catch (e) {
+    alert("Camera access not available");
+  }
+});
 
 async function scanQR() {
-  const modal = document.getElementById("qrModal");
-  modal.classList.remove("hidden");
+  const reader = document.getElementById("qr-reader");
+  const select = document.getElementById("cameraSelect");
 
-  const devices = await Html5Qrcode.getCameras();
-  if (!devices.length) {
-    alert("No camera found");
+  if (!select.value) {
+    alert("Please select a camera first");
     return;
   }
 
-  const camera =
-    devices.find(d => d.label.toLowerCase().includes("back")) ||
-    devices[devices.length - 1];
+  reader.style.display = "block";
+  reader.innerHTML = "";
+
+  if (qrScanner) {
+    await qrScanner.stop().catch(() => {});
+  }
 
   qrScanner = new Html5Qrcode("qr-reader");
 
   qrScanner.start(
-    camera.id,
+    select.value,
     {
-      fps: 15,
-      qrbox: 250
+      fps: 12,
+      qrbox: 240
     },
-    decodedText => {
-      // 👇 THIS IS THE KEY CHANGE
-      handleQRText(decodedText);
+    (decodedText) => {
+      // ✅ READ ONLY RAW TEXT
+      const uid = decodedText.trim();
+
+      qrScanner.stop().catch(() => {});
+      reader.style.display = "none";
+
+      document.getElementById("uid").value = uid;
+      loadPhotos(); // SAME AS CLICKING VIEW
     },
     () => {}
   );
 }
 
-function handleQRText(text) {
-  const uid = text.trim();
-
-  if (!uid) return;
-
-  closeQR();
-
-  document.getElementById("uid").value = uid;
-  loadPhotos(); // SAME AS BUTTON CLICK
-}
-
-function closeQR() {
-  if (qrScanner) {
-    qrScanner.stop().catch(() => {});
-    qrScanner = null;
-  }
-  document.getElementById("qrModal").classList.add("hidden");
-}
 
 // -------------------------------------
 // CLOSE QR (CRITICAL – PREVENT DARK LOCK)
