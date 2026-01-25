@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Test</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+  <style>
+    body { background:#000; color:#fff; text-align:center; }
+    #reader { width:300px; margin:auto; }
+  </style>
+</head>
+<body>
+
+<h2>QR SCAN TEST</h2>
+<div id="reader"></div>
+<p id="out"></p>
+
+<script>
+const qr = new Html5Qrcode("reader");
+
+Html5Qrcode.getCameras().then(cams => {
+  qr.start(
+    cams[0].id,
+    { fps: 10, qrbox: 250 },
+    text => {
+      document.getElementById("out").innerText =
+        "SCANNED: " + text;
+    }
+  );
+});
+</script>
+
+</body>
+</html>
