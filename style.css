@@ -1,82 +1,59 @@
-/* =========================
-   GLOBAL
-========================= */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
-  font-family: "Inter", Arial, sans-serif;
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
   background: #0f0f0f;
   color: #ffffff;
-  min-height: 100vh;
 }
-
-/* =========================
-   HEADER
-========================= */
 
 header {
   text-align: center;
-  padding: 30px 15px;
+  padding: 32px 16px;
 }
 
 header h1 {
-  font-size: 2rem;
   color: #ffd60a;
-  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 8px;
 }
 
 header p {
-  color: #cccccc;
+  color: #cfcfcf;
   font-size: 1rem;
 }
 
-/* =========================
-   INPUT AREA
-========================= */
-
 .upload-box {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 20px;
 }
 
 .upload-box input {
   background: #181818;
-  border: 2px solid #ffd60a;
   color: white;
-  padding: 14px;
+  border: 2px solid #ffd60a;
   border-radius: 12px;
+  padding: 14px;
   font-size: 16px;
   width: 260px;
-  outline: none;
 }
 
 .upload-box input:focus {
-  box-shadow: 0 0 10px rgba(255,214,10,0.4);
+  outline: none;
+  box-shadow: 0 0 12px rgba(255,214,10,.35);
 }
 
-/* =========================
-   BUTTONS
-========================= */
-
 button {
-  position: relative;
-  overflow: hidden;
   background: #ffd60a;
-  color: #000;
+  color: #111;
   border: none;
   padding: 14px 20px;
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all .2s ease;
 }
 
 button:hover {
@@ -84,66 +61,22 @@ button:hover {
   transform: translateY(-2px);
 }
 
-button:active {
-  transform: translateY(0);
-}
-
-button::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -150%;
-  width: 40%;
-  height: 200%;
-  background: rgba(255,255,255,0.3);
-  transform: rotate(25deg);
-  transition: 0.6s;
-}
-
-button:hover::after {
-  left: 150%;
-}
-
-/* =========================
-   LOADING
-========================= */
-
-.hidden {
-  display: none !important;
-}
-
 #loading {
   text-align: center;
-  padding: 20px;
   color: #ffd60a;
-  font-size: 18px;
-}
-
-/* =========================
-   GALLERY
-========================= */
-
-.masonry {
-  column-count: 4;
-  column-gap: 16px;
-  padding: 16px;
-}
-
-.photo {
-  break-inside: avoid;
-  margin-bottom: 16px;
+  padding: 20px;
 }
 
 .photo img {
   width: 100%;
   border-radius: 16px;
-  display: block;
+  border: 1px solid rgba(255,214,10,.15);
 
   box-shadow:
-    0 0 20px rgba(255,214,10,0.25),
-    0 10px 25px rgba(0,0,0,0.6);
+    0 0 20px rgba(255,214,10,.15),
+    0 10px 25px rgba(0,0,0,.6);
 
-  transition: 0.25s;
+  transition: transform .25s ease;
 }
 
 .photo img:hover {
@@ -151,58 +84,27 @@ button:hover::after {
 }
 
 .photo a {
-  display: block;
-  text-align: right;
-  margin-top: 8px;
   color: #ffd60a;
   text-decoration: none;
   font-weight: 600;
 }
 
-/* =========================
-   QR MODAL
-========================= */
-
-.qr-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.qr-modal.hidden {
-  display: none !important;
-}
-
 .qr-box {
-  width: min(92vw, 420px);
   background: #181818;
   border: 2px solid #ffd60a;
   border-radius: 16px;
   padding: 15px;
 
   box-shadow:
-    0 0 30px rgba(255,214,10,0.25);
-}
-
-#qr-reader {
-  width: 100%;
-  height: 320px;
-  border-radius: 12px;
-  overflow: hidden;
+    0 0 30px rgba(255,214,10,.25);
 }
 
 #cameraSelect {
-  width: 100%;
-  margin-top: 12px;
-  padding: 12px;
   background: #111;
   color: #ffd60a;
   border: 1px solid #ffd60a;
   border-radius: 10px;
+  padding: 10px;
 }
 
 .qr-controls {
@@ -213,57 +115,4 @@ button:hover::after {
 
 .qr-controls button {
   flex: 1;
-}
-
-/* =========================
-   MOBILE
-========================= */
-
-@media (max-width: 1024px) {
-  .masonry {
-    column-count: 3;
-  }
-}
-
-@media (max-width: 768px) {
-  .masonry {
-    column-count: 2;
-  }
-
-  .upload-box {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .upload-box input,
-  .upload-box button {
-    width: 100%;
-    max-width: 350px;
-  }
-
-  header h1 {
-    font-size: 1.7rem;
-  }
-
-  #qr-reader {
-    height: 280px;
-  }
-}
-
-@media (max-width: 480px) {
-  .masonry {
-    column-count: 1;
-  }
-
-  header h1 {
-    font-size: 1.4rem;
-  }
-
-  header p {
-    font-size: 0.9rem;
-  }
-
-  #qr-reader {
-    height: 250px;
-  }
 }
